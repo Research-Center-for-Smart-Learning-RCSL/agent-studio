@@ -28,13 +28,15 @@ DATABASE_URL=... npx tsx scripts/load-export.ts prompt-export.jsonl
 
 ## Deployment
 
-On lab-100-18, with `.env` filled from `.env.example`:
+On lab-100-18, with `.env` filled from `.env.example`, always through the preflight check:
 
 ```sh
-docker compose up -d --build
+sh scripts/preflight.sh && docker compose up -d --build
 ```
 
-The app listens on host port 8040. Nginx Proxy Manager forwards `studio.rcsl.online` to it, with a Let's Encrypt certificate. The Google OAuth client needs `https://studio.rcsl.online/api/auth/callback/google` as an authorized redirect URI. agent.rcsl.online then needs `STUDIO_API` and `STUDIO_RUNTIME_TOKEN` (see `docs/agent-studio.md` in that repository).
+The compose network's subnet must be pinned with `STUDIO_SUBNET`. Left to Docker, the next subnet it picks on this host is 192.168.64.0/20, which covers the VPN clients and makes the whole host unreachable; that happened on 2026-10-27 (OpenAI-Logs-Manager) and on 2026-11-22 (this stack), and both times the network had to be removed from the BMC console. The preflight script refuses a subnet that overlaps a route, another Docker network, or the VPN range.
+
+The app listens on 192.168.100.18:8040. Nginx Proxy Manager forwards `studio.rcsl.online` to it, with a Let's Encrypt certificate. The Google OAuth client needs `https://studio.rcsl.online/api/auth/callback/google` as an authorized redirect URI. agent.rcsl.online then needs `STUDIO_API` and `STUDIO_RUNTIME_TOKEN` (see `docs/agent-studio.md` in that repository).
 
 ## Runtime API
 

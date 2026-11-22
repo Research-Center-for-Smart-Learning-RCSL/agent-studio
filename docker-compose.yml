@@ -1,5 +1,8 @@
 # Production on lab-100-18. Nginx Proxy Manager forwards studio.rcsl.online
-# to host port 8040; Postgres is reachable only on the compose network.
+# to 192.168.100.18:8040; Postgres is reachable only on the compose network.
+# Run scripts/preflight.sh before every `up` (README.md, Deployment).
+name: agent-studio
+
 services:
   app:
     build: .
@@ -11,7 +14,9 @@ services:
       AUTH_URL: https://studio.rcsl.online
       AUTH_TRUST_HOST: "true"
     ports:
-      - "8040:3000"
+      # Nginx Proxy Manager runs in a bridged container and proxies to the
+      # host's LAN address, so bind there rather than on every interface.
+      - "${STUDIO_BIND:-192.168.100.18}:8040:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -29,6 +34,17 @@ services:
       test: ["CMD-SHELL", "pg_isready -U studio -d agent_studio"]
       interval: 5s
       retries: 10
+
+networks:
+  default:
+    # Pinned, never left to Docker's address pool. On this host Docker's next
+    # pick is 192.168.64.0/20, which covers the VPN clients (192.168.77.x):
+    # replies to them go into the bridge and the host becomes unreachable. That
+    # happened to OpenAI-Logs-Manager on 2026-10-27 and to this stack on
+    # 2026-11-22; both times the network had to be removed from the BMC console.
+    ipam:
+      config:
+        - subnet: ${STUDIO_SUBNET:?set STUDIO_SUBNET in .env to a subnet unused on this host}
 
 volumes:
   agent-studio-db:
