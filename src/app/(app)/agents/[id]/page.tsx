@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { getAgent, getVersion, listVersions } from "@/lib/agents";
 import { can, requireUser } from "@/lib/authz";
+import { toolFileKey } from "@/lib/tool-file-credentials";
 import { AgentEditor, type ToolTemplate } from "./agent-editor";
 
 export default async function AgentPage(props: PageProps<"/agents/[id]">) {
@@ -18,7 +19,7 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
     (found.agent.publishedVersion !== null ? await getVersion(id, found.agent.publishedVersion) : null) ||
     (versions[0] ? await getVersion(id, versions[0].version) : null);
 
-  // Tool templates: the latest definition of every named tool across published agents.
+  // File and vector-store references are scoped to the agent's OpenAI project.
   const templates = await db.execute<{ key: string; tool: Record<string, unknown> }>(sql`
     select distinct on (key) key, tool from (
       select coalesce(t->>'name', t->>'server_label', t->>'type') as key, t as tool, a.updated_at
@@ -26,11 +27,14 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
       join agent_versions v on v.agent_id = a.id and v.version = a.published_version
       cross join lateral jsonb_array_elements(v.tools) t
       where a.archived_at is null
+        and (a.project_id = ${found.agent.projectId}
+          or t->>'type' not in ('code_interpreter', 'shell', 'file_search'))
     ) x order by key, updated_at desc`);
 
   const models = await db.execute<{ model: string }>(sql`
     select model from agent_versions group by model order by count(*) desc limit 30`);
 
+  const canEdit = can(user, found.agent.projectId, "editor");
   return (
     <AgentEditor
       key={`${id}@${selected?.version ?? 0}`}
@@ -55,7 +59,8 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
             }
           : null
       }
-      canEdit={can(user, found.agent.projectId, "editor")}
+      canEdit={canEdit}
+      canUploadToolFiles={canEdit && !!toolFileKey(found.agent.projectId)}
       toolTemplates={templates.rows.map((r) => ({ key: r.key, tool: r.tool })) satisfies ToolTemplate[]}
       modelSuggestions={models.rows.map((r) => r.model)}
     />

@@ -271,7 +271,6 @@ function CreateAgentModal(props: { open: boolean; onClose: () => void; projects:
     <Modal
       title="新增 agent"
       open={props.open}
-      forceRender
       afterClose={resetSubmission}
       onCancel={() => {
         if (!submitting.current) props.onClose();

@@ -7,7 +7,6 @@ import Editor from "@monaco-editor/react";
 import {
   Alert,
   App,
-  AutoComplete,
   Button,
   Card,
   Col,
@@ -27,6 +26,7 @@ import {
   Typography,
 } from "antd";
 import type { AgentSettings, InstructionMessage } from "@/db/schema";
+import { maxToolFiles, maxToolUploadBytes, readToolJson, toolAttachments, toolFileId, toolVectorStoreId } from "@/lib/tool-attachments";
 import { publishVersionAction, saveVersionAction, setArchivedAction, updateAgentMetaAction } from "../../../actions";
 
 export type ToolTemplate = { key: string; tool: Record<string, unknown> };
@@ -70,6 +70,7 @@ export function AgentEditor(props: {
   canEdit: boolean;
   toolTemplates: ToolTemplate[];
   modelSuggestions: string[];
+  canUploadToolFiles: boolean;
 }) {
   return (
     <App>
@@ -166,6 +167,8 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
                 label: `工具 (${draft.tools.length})`,
                 children: (
                   <ToolsEditor
+                    agentId={props.agent.id}
+                    canUpload={props.canUploadToolFiles}
                     tools={draft.tools}
                     readOnly={readOnly}
                     templates={props.toolTemplates}
@@ -364,15 +367,28 @@ function ModelSettings(props: {
   const [rawOpen, setRawOpen] = useState(false);
   const [raw, setRaw] = useState("");
   const [rawError, setRawError] = useState<string | null>(null);
+  const [modelSearch, setModelSearch] = useState("");
+  const models = [...new Set([...props.suggestions, props.model, modelSearch.trim()].filter(Boolean))];
 
   return (
     <Form layout="vertical" disabled={props.readOnly} style={{ maxWidth: 560 }}>
-      <Form.Item label="模型" required>
-        <AutoComplete
-          value={props.model}
-          options={props.suggestions.map((m) => ({ value: m }))}
+      <Form.Item label="模型" htmlFor="agent-model" required>
+        <Select
+          id="agent-model"
+          aria-label="模型"
+          placeholder="選擇模型或輸入模型 ID"
+          value={props.model || undefined}
+          options={models.map((model) => ({
+            value: model,
+            label: model === modelSearch.trim() && model !== props.model && !props.suggestions.includes(model)
+              ? `使用 ${model}`
+              : model,
+          }))}
           onChange={(model) => props.onChange(model, s)}
-          showSearch={{ filterOption: (input, option) => String(option?.value).includes(input) }}
+          showSearch={{ searchValue: modelSearch, onSearch: setModelSearch, optionFilterProp: "value" }}
+          onOpenChange={(open) => {
+            if (!open) setModelSearch("");
+          }}
         />
       </Form.Item>
       <Row gutter={16}>
@@ -469,6 +485,8 @@ function ModelSettings(props: {
 }
 
 function ToolsEditor(props: {
+  agentId: string;
+  canUpload: boolean;
   tools: Record<string, unknown>[];
   readOnly: boolean;
   templates: ToolTemplate[];
@@ -476,22 +494,55 @@ function ToolsEditor(props: {
 }) {
   const [editing, setEditing] = useState<number | "new" | null>(null);
   const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const { message } = App.useApp();
   const present = new Set(props.tools.map(toolLabel));
+  const { tool, error } = useMemo(() => {
+    if (editing === null) return {};
+    try {
+      return { tool: readToolJson(text) };
+    } catch (issue) {
+      return { error: (issue as Error).message };
+    }
+  }, [editing, text]);
+  const attachments = tool ? toolAttachments(tool) : null;
+  const isFile = attachments?.kind === "file";
+  const needsVectorStore = attachments?.kind === "vectorStore" && attachments.refs.length === 0;
 
   function open(index: number | "new", tool: Record<string, unknown>) {
     setEditing(index);
     setText(JSON.stringify(tool, null, 2));
-    setError(null);
+  }
+
+  async function upload(file: File) {
+    if (!attachments || uploading || attachments.refs.length >= maxToolFiles) return;
+    if (!file.size || file.size > maxToolUploadBytes) {
+      message.error("請選擇 10 MB 以下的非空白檔案");
+      return;
+    }
+    setUploading(true);
+    const body = new FormData();
+    body.set("file", file);
+    try {
+      const response = await fetch(`/api/agents/${encodeURIComponent(props.agentId)}/tool-files`, { method: "POST", body });
+      const result = await response.json() as { id?: string; error?: string };
+      if (!response.ok || !result.id) throw new Error(result.error || "無法上傳檔案");
+      setText(JSON.stringify(attachments.apply([...new Set([...attachments.refs, result.id])]), null, 2));
+      message.success(`已上傳 ${file.name}`);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "無法上傳檔案");
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
     <>
       {!props.readOnly && (
-        <Space style={{ marginBottom: 12 }}>
+        <Space wrap style={{ marginBottom: 12, width: "100%" }}>
           <Select
             placeholder="從其他 agent 使用中的工具加入"
-            style={{ width: 360 }}
+            style={{ width: "min(360px, 70vw)" }}
             showSearch={{ optionFilterProp: "label" }}
             value={null}
             options={props.templates
@@ -502,9 +553,14 @@ function ToolsEditor(props: {
               if (t) props.onChange([...props.tools, structuredClone(t.tool)]);
             }}
           />
-          <Button onClick={() => open("new", { type: "function", name: "", description: "", parameters: { type: "object", properties: {} } })}>
-            自訂工具
-          </Button>
+          <Dropdown menu={{ items: [
+            { key: "code", label: "程式碼直譯器", onClick: () => open("new", { type: "code_interpreter", container: { type: "auto" } }) },
+            { key: "shell", label: "Hosted Shell", onClick: () => open("new", { type: "shell", environment: { type: "container_auto" } }) },
+            { key: "search", label: "檔案搜尋", onClick: () => open("new", { type: "file_search", vector_store_ids: [] }) },
+            { key: "custom", label: "自訂工具", onClick: () => open("new", { type: "function", name: "", description: "", parameters: { type: "object", properties: {} } }) },
+          ] }} trigger={["click"]}>
+            <Button>新增工具</Button>
+          </Dropdown>
         </Space>
       )}
       {props.tools.length === 0 ? (
@@ -543,17 +599,71 @@ function ToolsEditor(props: {
       )}
       <Modal
         width={760}
-        title={editing === "new" ? "新增工具" : "工具設定 (JSON)"}
+        title={editing === "new" ? "新增工具" : "工具設定"}
         open={editing !== null}
-        onCancel={() => setEditing(null)}
-        okButtonProps={{ disabled: props.readOnly || !!error }}
+        onCancel={() => { if (!uploading) setEditing(null); }}
+        closable={!uploading}
+        keyboard={!uploading}
+        mask={{ closable: !uploading }}
+        cancelButtonProps={{ disabled: uploading }}
+        okText="套用"
+        okButtonProps={{ disabled: props.readOnly || !tool || needsVectorStore || uploading }}
         onOk={() => {
-          const parsed = JSON.parse(text);
-          if (editing === "new") props.onChange([...props.tools, parsed]);
-          else if (typeof editing === "number") props.onChange(props.tools.map((t, j) => (j === editing ? parsed : t)));
+          if (!tool || needsVectorStore || uploading) return;
+          if (editing === "new") props.onChange([...props.tools, tool]);
+          else if (typeof editing === "number") props.onChange(props.tools.map((t, j) => (j === editing ? tool : t)));
           setEditing(null);
         }}
       >
+        {attachments && (
+          <Form layout="vertical">
+            <Form.Item
+              label={isFile ? "附件檔案 ID" : "向量資料庫 ID"}
+              htmlFor="tool-attachment-ids"
+              extra={isFile ? "輸入同一 OpenAI 專案的 file ID，按 Enter 加入。" : "檔案搜尋使用同一 OpenAI 專案的向量資料庫。輸入 vs_ ID 後按 Enter。"}
+            >
+              <Select
+                id="tool-attachment-ids"
+                aria-label={isFile ? "附件檔案 ID" : "向量資料庫 ID"}
+                mode="tags"
+                value={attachments.refs}
+                disabled={props.readOnly || uploading}
+                onChange={(ids: string[]) => {
+                  const pattern = isFile ? toolFileId : toolVectorStoreId;
+                  if (ids.some((id) => !pattern.test(id) && !attachments.refs.includes(id))) {
+                    message.error(isFile ? "請輸入有效的檔案 ID" : "請輸入有效的向量資料庫 ID");
+                    return;
+                  }
+                  if (isFile && ids.length > maxToolFiles && ids.length > attachments.refs.length) {
+                    message.error(`最多可加入 ${maxToolFiles} 個檔案`);
+                    return;
+                  }
+                  setText(JSON.stringify(attachments.apply(ids), null, 2));
+                }}
+              />
+            </Form.Item>
+            {isFile && !props.readOnly && (
+              props.canUpload ? (
+                <Form.Item label="上傳本機檔案" htmlFor="tool-upload-file" extra="最多 10 MB。檔案會儲存在此 OpenAI 專案，套用並儲存版本後才會掛到工具。">
+                  <input
+                    id="tool-upload-file"
+                    type="file"
+                    style={{ maxWidth: "100%" }}
+                    disabled={uploading || attachments.refs.length >= maxToolFiles}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void upload(file);
+                      event.target.value = "";
+                    }}
+                  />
+                  {uploading && <span role="status">上傳中…</span>}
+                </Form.Item>
+              ) : (
+                <Typography.Paragraph type="secondary">此專案尚未設定本機上傳，可先使用已上傳檔案的 ID。</Typography.Paragraph>
+              )
+            )}
+          </Form>
+        )}
         <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
           MCP 等需要憑證的欄位請填 <code>{"{{secret:名稱}}"}</code>，由管理員在「管理 / 憑證」設定實際值，不要直接貼上金鑰。
         </Typography.Paragraph>
@@ -562,19 +672,8 @@ function ToolsEditor(props: {
             height="50vh"
             defaultLanguage="json"
             value={text}
-            onChange={(v) => {
-              setText(v ?? "");
-              try {
-                const parsed = JSON.parse(v ?? "");
-                if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || typeof parsed.type !== "string") {
-                  throw new Error("必須是含有 type 欄位的物件");
-                }
-                setError(null);
-              } catch (e) {
-                setError((e as Error).message);
-              }
-            }}
-            options={{ readOnly: props.readOnly, minimap: { enabled: false }, fontSize: 13 }}
+            onChange={(v) => setText(v ?? "")}
+            options={{ readOnly: props.readOnly || uploading, minimap: { enabled: false }, fontSize: 13 }}
           />
         </div>
         {error && <Typography.Text type="danger">{error}</Typography.Text>}
