@@ -170,6 +170,7 @@ export function AgentList({
                       <div className="agent-identity-text">
                         <Link className="agent-name" href={`/agents/${row.id}`}>{name}</Link>
                         <code className="agent-id" title={row.id}>{row.id}</code>
+                        <span className="agent-scope-compact">{row.projectName} · {row.organizationName}</span>
                         <time className="agent-updated-compact" dateTime={row.updatedAt}>
                           {dateFormat.format(new Date(row.updatedAt))}
                         </time>
@@ -178,9 +179,9 @@ export function AgentList({
                   ),
                 },
                 {
-                  title: "組織 / 專案",
+                  title: "專案 / 組織",
                   key: "scope",
-                  width: "27%",
+                  className: "agent-scope-column",
                   render: (_, row) => (
                     <div className="agent-scope">
                       <span>{row.projectName}</span>
@@ -191,7 +192,7 @@ export function AgentList({
                 {
                   title: "版本與狀態",
                   key: "versions",
-                  width: "21%",
+                  className: "agent-version-column",
                   render: (_, row) => (
                     <div className="agent-versions">
                       <span className={row.publishedVersion === null ? "version-chip" : "version-chip version-published"}>

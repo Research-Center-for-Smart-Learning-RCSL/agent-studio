@@ -375,13 +375,23 @@ a {
 
 .agent-id,
 .agent-scope > :last-child,
+.agent-scope-compact,
 .directory-panel time {
   color: var(--studio-muted);
   font-size: 12px;
 }
 
-.agent-updated-compact {
+.agent-updated-compact,
+.agent-scope-compact {
   display: none;
+}
+
+.agent-scope-column {
+  width: 27%;
+}
+
+.agent-version-column {
+  width: 21%;
 }
 
 .agent-updated-column {
@@ -460,6 +470,18 @@ a {
   .directory-panel .ant-table-thead > tr > th:first-child,
   .directory-panel .ant-table-tbody > tr > td:first-child {
     padding-inline-start: 12px;
+  }
+
+  .directory-panel .agent-scope-column {
+    display: none;
+  }
+
+  .agent-scope-compact {
+    display: block;
+  }
+
+  .agent-version-column {
+    width: 34%;
   }
 
   .version-chip {
