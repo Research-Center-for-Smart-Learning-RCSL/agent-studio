@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { App, Button, Empty, Form, Input, Modal, Select, Switch, Table } from "antd";
@@ -20,6 +20,14 @@ type Row = {
 };
 
 type Project = { id: string; name: string; organizationId: string; organizationName: string };
+
+function distinguishOptions(options: { value: string; label: string }[]) {
+  const counts = new Map<string, number>();
+  for (const { label } of options) counts.set(label, (counts.get(label) ?? 0) + 1);
+  return options.map((option) => counts.get(option.label) === 1
+    ? option
+    : { ...option, label: `${option.label} (${option.value})` });
+}
 
 const dateFormat = new Intl.DateTimeFormat("zh-TW", {
   dateStyle: "short",
@@ -47,12 +55,13 @@ export function AgentList({
   const [organization, setOrganization] = useState<string>();
   const [project, setProject] = useState<string>();
   const [creating, setCreating] = useState(false);
+  const [page, setPage] = useState(1);
 
   const organizations = new Map(projects.map((p) => [p.organizationId, p.organizationName]));
-  const organizationOptions = [...organizations].map(([value, label]) => ({ value, label }));
-  const projectOptions = projects
+  const organizationOptions = distinguishOptions([...organizations].map(([value, label]) => ({ value, label })));
+  const projectOptions = distinguishOptions(projects
     .filter((p) => !organization || p.organizationId === organization)
-    .map((p) => ({ value: p.id, label: organization ? p.name : `${p.organizationName} / ${p.name}` }));
+    .map((p) => ({ value: p.id, label: organization ? p.name : `${p.organizationName} / ${p.name}` })));
 
   const search = query.trim().toLowerCase();
   const hasFilters = Boolean(search || organization || project);
@@ -67,6 +76,7 @@ export function AgentList({
     setQuery("");
     setOrganization(undefined);
     setProject(undefined);
+    setPage(1);
   }
 
   return (
@@ -95,7 +105,10 @@ export function AgentList({
                   placeholder="搜尋名稱或 ID"
                   allowClear
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setPage(1);
+                  }}
                 />
               </div>
               <div className="filter-field">
@@ -111,6 +124,7 @@ export function AgentList({
                   onChange={(value) => {
                     setOrganization(value);
                     setProject(undefined);
+                    setPage(1);
                   }}
                 />
               </div>
@@ -124,7 +138,10 @@ export function AgentList({
                   showSearch={{ optionFilterProp: "label" }}
                   options={projectOptions}
                   value={project}
-                  onChange={setProject}
+                  onChange={(value) => {
+                    setProject(value);
+                    setPage(1);
+                  }}
                 />
               </div>
             </div>
@@ -142,7 +159,10 @@ export function AgentList({
                   aria-label="包含已封存"
                   checked={includeArchived}
                   loading={archivePending}
-                  onChange={(checked) => startArchiveTransition(() => router.push(checked ? "/?archived=1" : "/"))}
+                  onChange={(checked) => {
+                    setPage(1);
+                    startArchiveTransition(() => router.push(checked ? "/?archived=1" : "/"));
+                  }}
                 />
                 包含已封存
               </label>
@@ -151,7 +171,7 @@ export function AgentList({
             <Table<Row>
               rowKey="id"
               dataSource={filtered}
-              pagination={{ pageSize: 50, hideOnSinglePage: true, showSizeChanger: false }}
+              pagination={{ current: page, onChange: setPage, pageSize: 50, hideOnSinglePage: true, showSizeChanger: false }}
               locale={{
                 emptyText: (
                   <Empty
@@ -222,55 +242,71 @@ export function AgentList({
         )}
       </section>
 
-      {creating && (
-        <CreateAgentModal onClose={() => setCreating(false)} projects={editableProjects} selectedProject={project} />
-      )}
+      <CreateAgentModal open={creating} onClose={() => setCreating(false)} projects={editableProjects} selectedProject={project} />
     </App>
   );
 }
 
-function CreateAgentModal(props: { onClose: () => void; projects: Project[]; selectedProject?: string }) {
+function CreateAgentModal(props: { open: boolean; onClose: () => void; projects: Project[]; selectedProject?: string }) {
   const router = useRouter();
   const { message } = App.useApp();
   const [form] = Form.useForm<{ projectId: string; name: string }>();
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   const initialProject = props.projects.find((p) => p.id === props.selectedProject);
+
+  function resetSubmission() {
+    submitting.current = false;
+    setBusy(false);
+  }
 
   return (
     <Modal
       title="新增 agent"
-      open
-      onCancel={props.onClose}
+      open={props.open}
+      destroyOnHidden
+      afterClose={resetSubmission}
+      onCancel={() => {
+        if (!submitting.current) props.onClose();
+      }}
       okText="建立"
       cancelText="取消"
+      cancelButtonProps={{ disabled: busy }}
+      closable={!busy}
+      keyboard={!busy}
+      mask={{ closable: !busy }}
       confirmLoading={busy}
       onOk={() => form.submit()}
     >
       <Form
         form={form}
         layout="vertical"
+        disabled={busy}
+        clearOnDestroy
         initialValues={{ projectId: initialProject?.id }}
         onFinish={async (values) => {
+          if (submitting.current) return;
+          submitting.current = true;
           setBusy(true);
           try {
             const result = await createAgentAction(values.projectId, values.name);
             if (!result.ok) {
               message.error(result.error);
+              resetSubmission();
               return;
             }
             props.onClose();
             router.push(`/agents/${result.data}`);
           } catch {
             message.error("無法建立 agent，請稍後再試。");
-          } finally {
-            setBusy(false);
+            resetSubmission();
           }
         }}
       >
         <Form.Item name="projectId" label="專案" rules={[{ required: true, message: "請選擇專案" }]}>
           <Select
             showSearch={{ optionFilterProp: "label" }}
-            options={props.projects.map((p) => ({ value: p.id, label: `${p.organizationName} / ${p.name}` }))}
+            options={distinguishOptions(props.projects.map((p) => ({ value: p.id, label: `${p.organizationName} / ${p.name}` })))}
           />
         </Form.Item>
         <Form.Item name="name" label="名稱" rules={[{ required: true, whitespace: true, message: "請輸入名稱" }]}>
