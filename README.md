@@ -24,7 +24,7 @@ docker cp kebbi-browser-backend:/tmp/prompt-export.jsonl .
 DATABASE_URL=... npx tsx scripts/load-export.ts prompt-export.jsonl
 ```
 
-Both steps are idempotent. Re-running the export appends only versions not yet exported; re-running the load replaces imported versions and never touches versions saved in Studio.
+`scripts/dump-runtime-requests.ts` and `scripts/verify_inline_requests.py` then check that the inline requests reproduce the stored prompts (see docs/design.md, Import). Both import steps are idempotent. Re-running the export appends only versions not yet exported; re-running the load replaces imported versions and never touches versions saved in Studio.
 
 ## Deployment
 

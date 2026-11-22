@@ -92,6 +92,53 @@ def probe(client: httpx.Client, api_key: str, prompt_id: str, version, model=Non
     return 200, last
 
 
+CONTAINER_FILE = re.compile(r"^/mnt/data/(file-[A-Za-z0-9]+)-")
+
+
+def recover_shell_environments(http: httpx.Client, api_key: str, raw: dict) -> dict:
+    """
+    A stored prompt echoes its hosted shell tool as a reference to the
+    container OpenAI just created for the call, which expires within minutes.
+    Rebuild the container_auto spec from that live container: memory limit,
+    network policy, and the attached files, whose ids are the prefix of their
+    /mnt/data paths. Must run right after the probe, while the container lives.
+    """
+    tools = []
+    recovered = False
+    for tool in raw.get("tools") or []:
+        environment = tool.get("environment") or {}
+        if tool.get("type") != "shell" or environment.get("type") != "container_reference":
+            tools.append(tool)
+            continue
+        headers = {"Authorization": f"Bearer {api_key}"}
+        container_id = environment["container_id"]
+        container = http.get(
+            f"https://api.openai.com/v1/containers/{container_id}", headers=headers, timeout=30
+        ).json()
+        files = http.get(
+            f"https://api.openai.com/v1/containers/{container_id}/files?limit=100",
+            headers=headers,
+            timeout=30,
+        ).json()
+        spec = {"type": "container_auto"}
+        file_ids = []
+        for item in files.get("data") or []:
+            match = CONTAINER_FILE.match(item.get("path") or "")
+            if item.get("source") == "user" and match:
+                file_ids.append(match.group(1))
+        if file_ids:
+            spec["file_ids"] = file_ids
+        if container.get("memory_limit"):
+            spec["memory_limit"] = container["memory_limit"]
+        if container.get("network_policy"):
+            spec["network_policy"] = container["network_policy"]
+        tools.append({**tool, "environment": spec})
+        recovered = True
+    if not recovered:
+        return raw
+    return {**raw, "tools": tools, "_environment_recovered": True}
+
+
 def snapshot(raw: dict) -> dict:
     instructions = [
         item
@@ -112,6 +159,7 @@ def snapshot(raw: dict) -> dict:
         "parallel_tool_calls": raw.get("parallel_tool_calls"),
         "input_tokens": (raw.get("usage") or {}).get("input_tokens"),
         "model_unavailable": bool(raw.get("_model_unavailable")),
+        "environment_recovered": bool(raw.get("_environment_recovered")),
     }
 
 
@@ -198,9 +246,13 @@ def export_prompt(row: dict, done: set, http: httpx.Client) -> list:
             if status == 200:
                 raw = {**raw, "model": missing.group(1)}
                 raw["_model_unavailable"] = True
+        if status == 200:
+            raw = recover_shell_environments(http, api_key, raw)
         return status, raw
 
-    if status != 200 and MISSING_MODEL.search(json.dumps(raw)):
+    if status == 200:
+        raw = recover_shell_environments(http, api_key, raw)
+    elif MISSING_MODEL.search(json.dumps(raw)):
         status, raw = probe_version(None)
     if status != 200:
         return [{**base, "ok": False, "version": None, "error": raw.get("error")}]
@@ -246,6 +298,7 @@ def main_cli():
     parser.add_argument("--only", nargs="*", help="prompt ids to export")
     parser.add_argument("--list", action="store_true", help="print prompts and exit")
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--force", action="store_true", help="re-export versions already exported")
     args = parser.parse_args()
 
     rows = list_prompts()
@@ -256,7 +309,7 @@ def main_cli():
             print(json.dumps(row, ensure_ascii=False))
         return
 
-    done = load_done(args.out)
+    done = set() if args.force else load_done(args.out)
     started = time.time()
     written = failures = 0
     with httpx.Client() as http, open(args.out, "a", encoding="utf-8") as out:
