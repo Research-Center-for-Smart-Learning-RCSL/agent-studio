@@ -645,9 +645,10 @@ function ToolsEditor(props: {
             {isFile && !props.readOnly && (
               props.canUpload ? (
                 <Form.Item label="上傳本機檔案" htmlFor="tool-upload-file" extra="最多 10 MB。檔案會儲存在此 OpenAI 專案，套用並儲存版本後才會掛到工具。">
-                  <Input
+                  <input
                     id="tool-upload-file"
                     type="file"
+                    style={{ maxWidth: "100%" }}
                     disabled={uploading || attachments.refs.length >= maxToolFiles}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
