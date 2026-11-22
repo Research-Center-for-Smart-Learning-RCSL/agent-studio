@@ -1,0 +1,26 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #f5f6f8;
+}
+
+.diff-line {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0 8px;
+}
+.diff-add {
+  background: #e6ffec;
+}
+.diff-del {
+  background: #ffebe9;
+}
+.diff-ctx {
+  color: #57606a;
+}
