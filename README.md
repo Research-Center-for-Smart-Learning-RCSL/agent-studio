@@ -26,6 +26,24 @@ DATABASE_URL=... npx tsx scripts/load-export.ts prompt-export.jsonl
 
 `scripts/dump-runtime-requests.ts` and `scripts/verify_inline_requests.py` then check that the inline requests reproduce the stored prompts (see docs/design.md, Import). Both import steps are idempotent. Re-running the export appends only versions not yet exported; re-running the load replaces imported versions and never touches versions saved in Studio.
 
+### Catching up one project
+
+Until 2026-11-30 authors can still save versions on platform.openai.com, which Studio does not see. When someone reports a missing version, re-export only that project's agents; versions already exported are skipped, so each agent costs about two small calls. The export file must be owned by root inside the container (`/tmp` is sticky and `fs.protected_regular` blocks appending to another user's file there):
+
+```sh
+B=~/agent-studio-export/prompt-export-20261122.jsonl
+docker cp $B kebbi-browser-backend:/tmp/prompt-export.jsonl
+docker exec kebbi-browser-backend chown 0:0 /tmp/prompt-export.jsonl
+IDS=$(docker compose exec -T db psql -U studio -d agent_studio -tA   -c "select id from agents where project_id = '<proj_...>'" | tr -d '' | tr '
+' ' ')
+docker exec -w /app -e PYTHONPATH=/app kebbi-browser-backend   python /tmp/export_openai_prompts.py --out /tmp/prompt-export.jsonl --only $IDS
+docker cp kebbi-browser-backend:/tmp/prompt-export.jsonl $B
+docker compose cp $B app:/tmp/prompt-export.jsonl
+docker compose exec -T app npx tsx scripts/load-export.ts /tmp/prompt-export.jsonl
+```
+
+The load sets the published version to OpenAI's default only for agents that have no versions saved in Studio.
+
 ## Deployment
 
 On lab-100-18, with `.env` filled from `.env.example`, always through the preflight check:

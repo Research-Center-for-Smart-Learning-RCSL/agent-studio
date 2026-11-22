@@ -295,7 +295,9 @@ def export_prompt_safely(row: dict, done: set, http: httpx.Client) -> list:
 def main_cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", required=True)
-    parser.add_argument("--only", nargs="*", help="prompt ids to export")
+    # nargs="+": an empty --only (an id lookup that returned nothing) must
+    # fail rather than silently export every agent.
+    parser.add_argument("--only", nargs="+", help="prompt ids to export")
     parser.add_argument("--list", action="store_true", help="print prompts and exit")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--force", action="store_true", help="re-export versions already exported")
