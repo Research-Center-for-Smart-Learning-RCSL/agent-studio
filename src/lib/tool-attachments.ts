@@ -40,3 +40,23 @@ export const toolFileId = /^file[-_][A-Za-z0-9_-]+$/;
 export const toolVectorStoreId = /^vs_[A-Za-z0-9_-]+$/;
 export const maxToolFiles = 50;
 export const maxToolUploadBytes = 10 * 1024 * 1024;
+export const maxToolUploadCount = 10;
+export type ToolUploadMode = "file" | "search";
+export type ToolUploadAttachment = { id: string; names: string[] };
+
+export const toolAttachmentNamesKey = "_studio_attachment_names";
+
+export function attachmentNames(tool: Tool): Record<string, string[]> {
+  const value = tool[toolAttachmentNamesKey];
+  if (!isObject(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string[]] =>
+    Array.isArray(entry[1]) && entry[1].every((name) => typeof name === "string")));
+}
+
+export function withAttachmentNames(tool: Tool, refs: string[], names: Record<string, string[]>): Tool {
+  const next = { ...tool };
+  const retained = Object.fromEntries(refs.filter((id) => Object.hasOwn(names, id)).map((id) => [id, names[id]]));
+  if (Object.keys(retained).length) next[toolAttachmentNamesKey] = retained;
+  else delete next[toolAttachmentNamesKey];
+  return next;
+}

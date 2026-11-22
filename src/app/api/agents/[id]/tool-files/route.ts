@@ -1,60 +1,82 @@
 import { getAgent } from "@/lib/agents";
 import { can, getCurrentUser } from "@/lib/authz";
-import { maxToolUploadBytes, toolFileId } from "@/lib/tool-attachments";
+import { searchIndexStatus, uploadToolFiles } from "@/lib/openai-tool-files";
+import { maxToolUploadBytes, maxToolUploadCount, toolVectorStoreId } from "@/lib/tool-attachments";
 import { toolFileKey } from "@/lib/tool-file-credentials";
 
-export async function POST(request: Request, context: RouteContext<"/api/agents/[id]/tool-files">) {
-  const origin = new URL(process.env.AUTH_URL ?? request.url).origin;
-  if (request.headers.get("origin") !== origin) {
-    return Response.json({ error: "只能從 Agent Studio 上傳檔案" }, { status: 403 });
-  }
+type FileRoute = RouteContext<"/api/agents/[id]/tool-files">;
 
+function failure(error: string, status: number) {
+  return Response.json({ error }, { status });
+}
+
+async function projectAccess(context: FileRoute) {
   const user = await getCurrentUser();
-  if (!user) return Response.json({ error: "請先登入" }, { status: 401 });
+  if (!user) return failure("請先登入", 401);
   const { id } = await context.params;
   const found = await getAgent(id);
   if (!found || !can(user, found.agent.projectId, "editor")) {
-    return Response.json({ error: "沒有專案編輯權限" }, { status: 403 });
+    return failure("沒有專案編輯權限", 403);
   }
-  const key = toolFileKey(found.agent.projectId);
-  if (!key) return Response.json({ error: "專案尚未設定上傳憑證" }, { status: 503 });
+  const projectId = found.agent.projectId;
+  try {
+    const key = await toolFileKey(projectId);
+    return key ? { projectId, key } : failure("專案尚未啟用檔案上傳", 503);
+  } catch {
+    return failure("暫時無法讀取專案上傳憑證，請稍後重試", 503);
+  }
+}
+
+export async function POST(request: Request, context: FileRoute) {
+  const origin = new URL(process.env.AUTH_URL ?? request.url).origin;
+  if (request.headers.get("origin") !== origin) {
+    return failure("只能從 Agent Studio 上傳檔案", 403);
+  }
+
+  const access = await projectAccess(context);
+  if (access instanceof Response) return access;
 
   const contentLength = Number(request.headers.get("content-length"));
-  if (!Number.isSafeInteger(contentLength) || contentLength <= 0 || contentLength > maxToolUploadBytes + 16384) {
-    return Response.json({ error: "檔案大小上限為 10 MB" }, { status: 413 });
+  if (!Number.isSafeInteger(contentLength) || contentLength <= 0 || contentLength > maxToolUploadBytes + 65536) {
+    return failure("每次上傳的檔案總大小上限為 10 MB", 413);
   }
 
-  let file: FormDataEntryValue | null;
+  let form: FormData;
   try {
-    file = (await request.formData()).get("file");
+    form = await request.formData();
   } catch {
-    return Response.json({ error: "無法讀取檔案" }, { status: 400 });
+    return failure("無法讀取檔案", 400);
   }
-  if (!(file instanceof File) || file.size === 0) {
-    return Response.json({ error: "請選擇非空白檔案" }, { status: 400 });
+  const files = form.getAll("file");
+  const mode = form.get("mode") ?? "file";
+  if (mode !== "file" && mode !== "search") return failure("不支援的上傳方式", 400);
+  if (files.length === 0 || files.length > maxToolUploadCount ||
+      !files.every((file): file is File => file instanceof File && file.size > 0)) {
+    return failure(`請選擇 1 至 ${maxToolUploadCount} 個非空白檔案`, 400);
   }
-  if (file.size > maxToolUploadBytes) {
-    return Response.json({ error: "檔案大小上限為 10 MB" }, { status: 413 });
+  if (files.reduce((sum, file) => sum + file.size, 0) > maxToolUploadBytes) {
+    return failure("每次上傳的檔案總大小上限為 10 MB", 413);
   }
 
-  const body = new FormData();
-  body.set("file", file);
-  body.set("purpose", "user_data");
   try {
-    const response = await fetch("https://api.openai.com/v1/files", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "OpenAI-Project": found.agent.projectId },
-      body,
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (response.ok) {
-      const result: { id?: unknown } = await response.json();
-      if (typeof result.id === "string" && toolFileId.test(result.id)) {
-        return Response.json({ id: result.id }, { status: 201 });
-      }
-    }
+    const result = await uploadToolFiles(access, files, mode);
+    return Response.json(result, { status: result.status === "indexing" ? 202 : 201 });
   } catch {
-    return Response.json({ error: "上傳暫時無法完成，請稍後再試" }, { status: 502 });
+    return failure("OpenAI 無法處理這批檔案。請確認檔案格式或稍後再試。", 502);
   }
-  return Response.json({ error: "OpenAI 未接受上傳，請確認檔案格式與專案上傳權限" }, { status: 502 });
+}
+
+export async function GET(request: Request, context: FileRoute) {
+  const access = await projectAccess(context);
+  if (access instanceof Response) return access;
+  const storeId = new URL(request.url).searchParams.get("store");
+  if (!storeId || !toolVectorStoreId.test(storeId)) return failure("向量資料庫 ID 無效", 400);
+  try {
+    return Response.json(
+      { status: await searchIndexStatus(access, storeId) },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch {
+    return failure("暫時無法確認檔案索引，請稍後再試", 502);
+  }
 }
