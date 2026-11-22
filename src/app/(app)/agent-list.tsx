@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { App, Button, Empty, Form, Input, Modal, Select, Switch, Table } from "antd";
@@ -253,7 +253,14 @@ function CreateAgentModal(props: { open: boolean; onClose: () => void; projects:
   const [form] = Form.useForm<{ projectId: string; name: string }>();
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
-  const initialProject = props.projects.find((p) => p.id === props.selectedProject);
+  const initialProjectId = props.projects.find((p) => p.id === props.selectedProject)?.id;
+
+  useEffect(() => {
+    if (props.open) {
+      form.resetFields();
+      form.setFieldValue("projectId", initialProjectId);
+    }
+  }, [form, initialProjectId, props.open]);
 
   function resetSubmission() {
     submitting.current = false;
@@ -264,7 +271,7 @@ function CreateAgentModal(props: { open: boolean; onClose: () => void; projects:
     <Modal
       title="新增 agent"
       open={props.open}
-      destroyOnHidden
+      forceRender
       afterClose={resetSubmission}
       onCancel={() => {
         if (!submitting.current) props.onClose();
@@ -282,8 +289,6 @@ function CreateAgentModal(props: { open: boolean; onClose: () => void; projects:
         form={form}
         layout="vertical"
         disabled={busy}
-        clearOnDestroy
-        initialValues={{ projectId: initialProject?.id }}
         onFinish={async (values) => {
           if (submitting.current) return;
           submitting.current = true;
