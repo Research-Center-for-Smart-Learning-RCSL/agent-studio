@@ -119,6 +119,7 @@ export async function createAgentAction(projectId: string, name: string, copyFro
     const user = await requireProjectRole(projectId, "editor");
     const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
     if (!project) throw new Error("專案不存在");
+    if (!project.active) throw new Error("專案已停用");
     const initial = copyFrom
       ? validateVersion(copyFrom.version)
       : validateVersion({

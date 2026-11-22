@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
+import { StudioTheme } from "./studio-theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="zh-Hant">
       <body>
-        <AntdRegistry>{children}</AntdRegistry>
+        <AntdRegistry><StudioTheme>{children}</StudioTheme></AntdRegistry>
       </body>
     </html>
   );
