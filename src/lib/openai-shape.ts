@@ -1,4 +1,5 @@
 import type { AgentSettings, InstructionMessage } from "../db/schema";
+import { toolAttachmentNamesKey } from "./tool-attachments";
 
 const ROLES = new Set(["developer", "system", "user", "assistant"]);
 
@@ -81,6 +82,7 @@ const RESPONSE_ONLY_TOOL_FIELDS: Record<string, string[]> = {
 export function sanitizeTools(tools: Record<string, unknown>[]): Record<string, unknown>[] {
   return tools.map((tool) => {
     const clean = stripNulls(tool) as Record<string, unknown>;
+    delete clean[toolAttachmentNamesKey];
     for (const field of RESPONSE_ONLY_TOOL_FIELDS[String(clean.type)] ?? []) delete clean[field];
     return clean;
   });

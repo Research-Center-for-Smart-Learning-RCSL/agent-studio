@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toResponsesRequest } from "../src/lib/openai-shape";
-import { readToolJson, toolAttachments } from "../src/lib/tool-attachments";
+import { attachmentNames, readToolJson, toolAttachments, withAttachmentNames } from "../src/lib/tool-attachments";
 
 describe("tool attachments", () => {
   it("preserves the Hosted Shell configuration when updating files", () => {
@@ -41,5 +41,16 @@ describe("tool attachments", () => {
     expect(toolAttachments({ type: "code_interpreter", container: "cntr_existing" })).toBeNull();
     expect(toolAttachments({ type: "shell", environment: { type: "local" } })).toBeNull();
     expect(() => readToolJson("[]")).toThrow();
+  });
+
+  it("keeps filenames visible in Studio without sending them to OpenAI", () => {
+    const scoped = withAttachmentNames(
+      { type: "file_search", vector_store_ids: ["vs_old", "vs_new"] },
+      ["vs_old", "vs_new"],
+      { vs_new: ["lecture.pdf"], vs_removed: ["old.pdf"] },
+    );
+    expect(attachmentNames(scoped)).toEqual({ vs_new: ["lecture.pdf"] });
+    expect(toResponsesRequest({ model: "test", instructions: [], tools: [scoped], settings: {} }).tools)
+      .toEqual([{ type: "file_search", vector_store_ids: ["vs_old", "vs_new"] }]);
   });
 });

@@ -26,7 +26,7 @@ import {
   Typography,
 } from "antd";
 import type { AgentSettings, InstructionMessage } from "@/db/schema";
-import { maxToolFiles, maxToolUploadBytes, readToolJson, toolAttachments, toolFileId, toolVectorStoreId } from "@/lib/tool-attachments";
+import { attachmentNames, maxToolFiles, maxToolUploadBytes, maxToolUploadCount, readToolJson, toolAttachments, toolFileId, toolVectorStoreId, withAttachmentNames, type ToolUploadAttachment } from "@/lib/tool-attachments";
 import { publishVersionAction, saveVersionAction, setArchivedAction, updateAgentMetaAction } from "../../../actions";
 
 export type ToolTemplate = { key: string; tool: Record<string, unknown> };
@@ -484,6 +484,19 @@ function ModelSettings(props: {
   );
 }
 
+async function waitForSearchIndex(endpoint: string, id: string) {
+  const query = new URLSearchParams({ store: id });
+  const deadline = Date.now() + 45_000;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const status = await fetch(`${endpoint}?${query}`, { signal: AbortSignal.timeout(6000) })
+      .then(async (response) => response.ok ? (await response.json()).status : null)
+      .catch(() => null);
+    if (status === "ready" || status === "failed") return status;
+  }
+  return "indexing";
+}
+
 function ToolsEditor(props: {
   agentId: string;
   canUpload: boolean;
@@ -494,7 +507,9 @@ function ToolsEditor(props: {
 }) {
   const [editing, setEditing] = useState<number | "new" | null>(null);
   const [text, setText] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<"uploading" | "indexing" | null>(null);
+  const [pendingIndex, setPendingIndex] = useState<ToolUploadAttachment>();
+  const uploading = uploadStatus !== null;
   const { message } = App.useApp();
   const present = new Set(props.tools.map(toolLabel));
   const { tool, error } = useMemo(() => {
@@ -508,31 +523,72 @@ function ToolsEditor(props: {
   const attachments = tool ? toolAttachments(tool) : null;
   const isFile = attachments?.kind === "file";
   const needsVectorStore = attachments?.kind === "vectorStore" && attachments.refs.length === 0;
+  const names = tool ? attachmentNames(tool) : {};
+  const endpoint = `/api/agents/${encodeURIComponent(props.agentId)}/tool-files`;
 
   function open(index: number | "new", tool: Record<string, unknown>) {
     setEditing(index);
     setText(JSON.stringify(tool, null, 2));
+    setPendingIndex(undefined);
   }
 
-  async function upload(file: File) {
-    if (!attachments || uploading || attachments.refs.length >= maxToolFiles) return;
-    if (!file.size || file.size > maxToolUploadBytes) {
-      message.error("請選擇 10 MB 以下的非空白檔案");
+  function addUploads(uploads: ToolUploadAttachment[]) {
+    if (!attachments) return;
+    const refs = [...new Set([...attachments.refs, ...uploads.map(({ id }) => id)])];
+    const uploadedNames = Object.fromEntries(uploads.map(({ id, names }) => [id, names]));
+    setText(JSON.stringify(withAttachmentNames(attachments.apply(refs), refs, { ...names, ...uploadedNames }), null, 2));
+    message.success(`已加入 ${uploads.reduce((count, item) => count + item.names.length, 0)} 個檔案`);
+  }
+
+  async function checkIndex(attachment: ToolUploadAttachment) {
+    setPendingIndex(attachment);
+    setUploadStatus("indexing");
+    try {
+      const status = await waitForSearchIndex(endpoint, attachment.id);
+      if (status === "indexing") {
+        message.info("檔案仍在建立索引，可以重新檢查進度。");
+        return;
+      }
+      setPendingIndex(undefined);
+      if (status === "ready") addUploads([attachment]);
+      else message.error("檔案無法建立索引，請確認格式後再上傳。");
+    } finally {
+      setUploadStatus(null);
+    }
+  }
+
+  async function upload(files: File[]) {
+    if (!attachments || uploading || pendingIndex || !files.length) return;
+    if (files.length > maxToolUploadCount || files.some((file) => !file.size) ||
+        files.reduce((total, file) => total + file.size, 0) > maxToolUploadBytes) {
+      message.error(`每次可上傳 1 至 ${maxToolUploadCount} 個非空白檔案，總大小上限為 10 MB`);
       return;
     }
-    setUploading(true);
+    if (isFile && attachments.refs.length + files.length > maxToolFiles) {
+      message.error(`最多可加入 ${maxToolFiles} 個檔案，請減少這次選取的檔案`);
+      return;
+    }
+    setUploadStatus("uploading");
     const body = new FormData();
-    body.set("file", file);
+    body.set("mode", isFile ? "file" : "search");
+    for (const file of files) body.append("file", file);
     try {
-      const response = await fetch(`/api/agents/${encodeURIComponent(props.agentId)}/tool-files`, { method: "POST", body });
-      const result = await response.json() as { id?: string; error?: string };
-      if (!response.ok || !result.id) throw new Error(result.error || "無法上傳檔案");
-      setText(JSON.stringify(attachments.apply([...new Set([...attachments.refs, result.id])]), null, 2));
-      message.success(`已上傳 ${file.name}`);
+      const response = await fetch(endpoint, { method: "POST", body });
+      const result = await response.json() as {
+        attachments?: ToolUploadAttachment[];
+        error?: string;
+        status?: "ready" | "indexing";
+      };
+      if (!response.ok || !result.attachments?.length) throw new Error(result.error || "無法上傳檔案");
+      if (result.status === "indexing") {
+        await checkIndex(result.attachments[0]);
+      } else {
+        addUploads(result.attachments);
+      }
     } catch (error) {
       message.error(error instanceof Error ? error.message : "無法上傳檔案");
     } finally {
-      setUploading(false);
+      setUploadStatus(null);
     }
   }
 
@@ -607,9 +663,9 @@ function ToolsEditor(props: {
         mask={{ closable: !uploading }}
         cancelButtonProps={{ disabled: uploading }}
         okText="套用"
-        okButtonProps={{ disabled: props.readOnly || !tool || needsVectorStore || uploading }}
+        okButtonProps={{ disabled: props.readOnly || !tool || needsVectorStore || uploading || !!pendingIndex }}
         onOk={() => {
-          if (!tool || needsVectorStore || uploading) return;
+          if (!tool || needsVectorStore || uploading || pendingIndex) return;
           if (editing === "new") props.onChange([...props.tools, tool]);
           else if (typeof editing === "number") props.onChange(props.tools.map((t, j) => (j === editing ? tool : t)));
           setEditing(null);
@@ -618,15 +674,17 @@ function ToolsEditor(props: {
         {attachments && (
           <Form layout="vertical">
             <Form.Item
-              label={isFile ? "附件檔案 ID" : "向量資料庫 ID"}
+              label={isFile ? "已附加的檔案" : "搜尋資料來源"}
               htmlFor="tool-attachment-ids"
-              extra={isFile ? "輸入同一 OpenAI 專案的 file ID，按 Enter 加入。" : "檔案搜尋使用同一 OpenAI 專案的向量資料庫。輸入 vs_ ID 後按 Enter。"}
+              extra={props.canUpload ? undefined : "如已有同專案的識別碼，可以直接輸入並按 Enter 加入。"}
             >
               <Select
                 id="tool-attachment-ids"
                 aria-label={isFile ? "附件檔案 ID" : "向量資料庫 ID"}
                 mode="tags"
                 value={attachments.refs}
+                options={attachments.refs.map((id) => ({ value: id, label: names[id]?.join("、") || id }))}
+                maxTagTextLength={60}
                 disabled={props.readOnly || uploading}
                 onChange={(ids: string[]) => {
                   const pattern = isFile ? toolFileId : toolVectorStoreId;
@@ -638,28 +696,38 @@ function ToolsEditor(props: {
                     message.error(`最多可加入 ${maxToolFiles} 個檔案`);
                     return;
                   }
-                  setText(JSON.stringify(attachments.apply(ids), null, 2));
+                  setText(JSON.stringify(withAttachmentNames(attachments.apply(ids), ids, names), null, 2));
                 }}
               />
             </Form.Item>
-            {isFile && !props.readOnly && (
+            {!props.readOnly && (
               props.canUpload ? (
-                <Form.Item label="上傳本機檔案" htmlFor="tool-upload-file" extra="最多 10 MB。檔案會儲存在此 OpenAI 專案，套用並儲存版本後才會掛到工具。">
+                <Form.Item
+                  label="上傳本機檔案"
+                  htmlFor="tool-upload-file"
+                  extra={isFile ? "每次最多 10 個檔案，總大小 10 MB。" : "每次最多 10 個檔案，總大小 10 MB。同一批檔案會一起加入搜尋。"}
+                >
                   <input
                     id="tool-upload-file"
                     type="file"
+                    multiple
                     style={{ maxWidth: "100%" }}
-                    disabled={uploading || attachments.refs.length >= maxToolFiles}
+                    disabled={uploading || !!pendingIndex || (isFile && attachments.refs.length >= maxToolFiles)}
                     onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) void upload(file);
+                      void upload(Array.from(event.target.files ?? []));
                       event.target.value = "";
                     }}
                   />
-                  {uploading && <span role="status">上傳中…</span>}
+                  {uploading && <span role="status">{uploadStatus === "indexing" ? " 正在建立搜尋索引…" : " 上傳中…"}</span>}
+                  {pendingIndex && !uploading && (
+                    <Space wrap>
+                      <Button type="link" onClick={() => void checkIndex(pendingIndex)}>重新檢查索引</Button>
+                      <Button type="link" onClick={() => setPendingIndex(undefined)}>略過這批檔案</Button>
+                    </Space>
+                  )}
                 </Form.Item>
               ) : (
-                <Typography.Paragraph type="secondary">此專案尚未設定本機上傳，可先使用已上傳檔案的 ID。</Typography.Paragraph>
+                <Typography.Paragraph type="secondary">此專案尚未啟用本機上傳。</Typography.Paragraph>
               )
             )}
           </Form>
@@ -673,7 +741,7 @@ function ToolsEditor(props: {
             defaultLanguage="json"
             value={text}
             onChange={(v) => setText(v ?? "")}
-            options={{ readOnly: props.readOnly || uploading, minimap: { enabled: false }, fontSize: 13 }}
+            options={{ readOnly: props.readOnly || uploading || !!pendingIndex, minimap: { enabled: false }, fontSize: 13 }}
           />
         </div>
         {error && <Typography.Text type="danger">{error}</Typography.Text>}

@@ -90,9 +90,9 @@ Each call is billed for the whole prompt as input (about 14,600 input tokens for
 
 ## Deployment
 
-For Code Interpreter or Hosted Shell, authors can attach files by ID in the tool settings. File Search uses vector store IDs. These resources must belong to the agent's OpenAI project.
+Authors can upload files from the tool settings for Code Interpreter, Hosted Shell, and File Search. File Search creates and indexes a separate vector store for each batch. Existing store references stay in the draft, and previously saved versions keep their original stores. The author applies the tool changes and saves or publishes the agent version to attach the files. Studio shows filenames and sends only the provider IDs at runtime.
 
-Set the optional `STUDIO_FILE_UPLOAD_KEYS` server variable to a JSON object keyed by OpenAI project ID to enable local uploads for Code Interpreter and Hosted Shell. Assign each project a key scoped to its Files API. Uploaded files stay in that OpenAI project. The author applies the tool changes and saves the agent version to attach them.
+Run `node scripts/discover-tool-file-projects.mjs` in a server environment with the RCSL registry credentials. It reports how many projects OpenAI verified and emits a JSON object of project IDs and credential fingerprints for the `STUDIO_FILE_KEY_FINGERPRINTS` server variable. Rerun discovery when the registry keys rotate. For a project outside the RCSL registry, `STUDIO_FILE_UPLOAD_KEYS` accepts a JSON object keyed by project ID. Use credentials scoped to that project with Files and Vector Stores access.
 
 The image is built with Next.js standalone output. A compose file on lab-100-18 runs the application and a PostgreSQL 16 container on a private network; only the application port (8040) is published to the host for Nginx Proxy Manager. A proxy host for `studio.rcsl.online` with a Let's Encrypt certificate is added in Nginx Proxy Manager, since the wildcard DNS record already resolves the name to the server.
 
