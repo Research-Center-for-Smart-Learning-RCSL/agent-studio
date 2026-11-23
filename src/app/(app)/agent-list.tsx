@@ -91,6 +91,43 @@ export function AgentList({
             <span aria-hidden="true">+</span> 新增 agent
           </Button>
         )}
+        {hasAnyAccess && (
+          <div className="directory-scope">
+            <div className="filter-field">
+              <label htmlFor="agent-organization">組織</label>
+              <Select
+                id="agent-organization"
+                aria-label="組織"
+                placeholder="所有組織"
+                allowClear
+                showSearch={{ optionFilterProp: "label" }}
+                options={organizationOptions}
+                value={organization}
+                onChange={(value) => {
+                  setOrganization(value);
+                  setProject(undefined);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className="filter-field">
+              <label htmlFor="agent-project">專案</label>
+              <Select
+                id="agent-project"
+                aria-label="專案"
+                placeholder="所有專案"
+                allowClear
+                showSearch={{ optionFilterProp: "label" }}
+                options={projectOptions}
+                value={project}
+                onChange={(value) => {
+                  setProject(value);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="studio-panel directory-panel" aria-label="Agent 清單">
@@ -107,39 +144,6 @@ export function AgentList({
                   value={query}
                   onChange={(event) => {
                     setQuery(event.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-              <div className="filter-field">
-                <label htmlFor="agent-organization">組織</label>
-                <Select
-                  id="agent-organization"
-                  aria-label="組織"
-                  placeholder="所有組織"
-                  allowClear
-                  showSearch={{ optionFilterProp: "label" }}
-                  options={organizationOptions}
-                  value={organization}
-                  onChange={(value) => {
-                    setOrganization(value);
-                    setProject(undefined);
-                    setPage(1);
-                  }}
-                />
-              </div>
-              <div className="filter-field">
-                <label htmlFor="agent-project">專案</label>
-                <Select
-                  id="agent-project"
-                  aria-label="專案"
-                  placeholder="所有專案"
-                  allowClear
-                  showSearch={{ optionFilterProp: "label" }}
-                  options={projectOptions}
-                  value={project}
-                  onChange={(value) => {
-                    setProject(value);
                     setPage(1);
                   }}
                 />
