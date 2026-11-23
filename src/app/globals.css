@@ -243,15 +243,28 @@ a {
   overflow: hidden;
 }
 
-.directory-filters {
+.directory-scope {
+  flex-basis: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 17rem));
   gap: 16px;
+}
+
+.directory-scope label {
+  color: #e3f5ec;
+}
+
+.directory-filters {
   padding: 24px 24px 16px;
+}
+
+.directory-filters .filter-field {
+  max-width: 26rem;
 }
 
 .filter-field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   gap: 6px;
 }
@@ -449,13 +462,11 @@ a {
   }
 
   .directory-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
     padding: 16px 12px 12px;
   }
 
-  .filter-field:first-child {
-    grid-column: 1 / -1;
+  .directory-scope {
+    gap: 12px;
   }
 
   .directory-summary {
@@ -486,6 +497,12 @@ a {
 
   .version-chip {
     padding-inline: 4px;
+  }
+}
+
+@media (max-width: 400px) {
+  .directory-scope {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
