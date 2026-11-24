@@ -1,5 +1,7 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Alert, Button, Tag } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import {
@@ -9,6 +11,28 @@ import {
 import type { Attachment } from "@/lib/logs-types";
 import { LogsError } from "./logs-client";
 import styles from "./logs.module.css";
+
+/** What a click inside a table row must leave alone: links, buttons, form controls and a text selection. */
+const interactive = "a, button, input, textarea, select, label, audio, video, .ant-checkbox-wrapper, .ant-select, .ant-tag-checkable";
+
+/** Row props that make a whole table row open `href`, as a plain click or in a new tab with Ctrl or Cmd. */
+export function useRowOpen() {
+  const router = useRouter();
+  return (href: string | null) => ({
+    className: href ? styles.clickRow : undefined,
+    onClick: (event: MouseEvent<HTMLElement>) => {
+      if (!href || (event.target as HTMLElement).closest(interactive) || window.getSelection()?.toString()) return;
+      if (event.ctrlKey || event.metaKey) window.open(href, "_blank", "noopener");
+      else router.push(href);
+    },
+  });
+}
+
+/** The visible way into one row: a labelled link with an arrow, so a row never looks like plain text. */
+export function OpenLink({ href }: { href: string }) {
+  const { t } = useI18n();
+  return <Link className={styles.open} href={href}>{t("查看")}<span aria-hidden="true"> ›</span></Link>;
+}
 
 export function Highlight({ text, query }: { text: string; query: string }) {
   const terms = searchTerms(query);

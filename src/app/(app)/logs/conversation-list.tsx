@@ -8,7 +8,7 @@ import type { ConversationSummary } from "@/lib/logs-types";
 import { ExportDialog } from "./export-dialog";
 import { usePagedLogs } from "./logs-client";
 import { FilterBar, useUrlFilters } from "./logs-filters";
-import { ErrorNote, Highlight, LoadMore, RuntimeTag } from "./logs-ui";
+import { ErrorNote, Highlight, LoadMore, OpenLink, RuntimeTag, useRowOpen } from "./logs-ui";
 import styles from "./logs.module.css";
 import { conversationHref } from "./turn-card";
 
@@ -19,6 +19,7 @@ export function ConversationList() {
   void _status;
   void _kind;
   const list = usePagedLogs<ConversationSummary>("/v1/conversations", { ...conversationFilters, limit: 50 }, !bad);
+  const rowOpen = useRowOpen();
   const [selected, setSelected] = useState<string[]>([]);
   const [exporting, setExporting] = useState(false);
   const empty = !list.loading && !list.error && list.items.length === 0;
@@ -43,6 +44,7 @@ export function ConversationList() {
             rowSelection={{ selectedRowKeys: selected, onChange: (keys) => setSelected(keys.map(String).slice(0, 200)) }}
             dataSource={list.items}
             scroll={{ x: "max-content" }}
+            onRow={(row) => rowOpen(row.match_turn_id ? conversationHref(row.conversation, row.match_turn_id) : conversationHref(row.conversation))}
             columns={[
               {
                 title: t("最近活動"),
@@ -76,6 +78,11 @@ export function ConversationList() {
                     </div>
                   );
                 },
+              },
+              {
+                title: "",
+                fixed: "right" as const,
+                render: (_: unknown, row) => <OpenLink href={row.match_turn_id ? conversationHref(row.conversation, row.match_turn_id) : conversationHref(row.conversation)} />,
               },
             ]}
           />

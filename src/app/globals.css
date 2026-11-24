@@ -373,6 +373,36 @@ a {
   padding-inline-start: 24px;
 }
 
+.directory-panel .agent-row {
+  cursor: pointer;
+}
+
+.directory-panel .agent-row:hover > td {
+  background: #eef3f6 !important;
+}
+
+.agent-open {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: 6px;
+  color: var(--studio-accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.agent-row:hover .agent-open,
+.agent-open:hover {
+  border-color: var(--studio-accent);
+  background: #fff;
+}
+
+.directory-panel .agent-open-column {
+  text-align: end;
+  padding-inline-end: 24px;
+}
+
 .directory-list-footer {
   display: flex;
   flex-wrap: wrap;

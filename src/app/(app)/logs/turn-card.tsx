@@ -32,7 +32,7 @@ export function TurnCard({ turn, highlight = false, query = "", showConversation
         {turn.agent && <span title={agentWhere(turn)}>{turn.agent}</span>}
         {(tags ?? turn.tags).map((tag) => <Tag key={tag}>{tag}</Tag>)}
         {showConversation && turn.conversation && (
-          <Link className={styles.push} href={conversationHref(turn.conversation, turn.id)}>{t("在對話中查看")}</Link>
+          <span className={styles.push}><Link className={styles.open} href={conversationHref(turn.conversation, turn.id)}>{t("在對話中查看")}<span aria-hidden="true"> ›</span></Link></span>
         )}
       </header>
       {(turn.input_text != null || turn.attachments.length > 0 || hasMedia(userMedia)) && (

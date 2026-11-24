@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n-client";
 import { agentWhere, wallClock } from "@/lib/logs-format";
 import type { ConversationSummary, Turn } from "@/lib/logs-types";
 import { usePagedLogs } from "./logs-client";
-import { ErrorNote, LoadMore, RuntimeTag } from "./logs-ui";
+import { ErrorNote, LoadMore, OpenLink, RuntimeTag, useRowOpen } from "./logs-ui";
 import styles from "./logs.module.css";
 import { TurnCard, conversationHref } from "./turn-card";
 
@@ -29,6 +29,7 @@ export function BookmarksView() {
 }
 
 function ConversationBookmarks() {
+  const rowOpen = useRowOpen();
   const { t } = useI18n();
   const list = usePagedLogs<BookmarkedConversation>("/v1/bookmarks/conversations", { limit: 50 });
   if (list.error) return <ErrorNote error={list.error} onRetry={list.reload} />;
@@ -42,6 +43,7 @@ function ConversationBookmarks() {
         pagination={false}
         dataSource={list.items}
         scroll={{ x: "max-content" }}
+        onRow={(row) => rowOpen(conversationHref(row.conversation))}
         columns={[
           { title: t("加入書籤"), dataIndex: "bookmarked_at", render: (v: string) => wallClock(v) },
           {
@@ -56,6 +58,7 @@ function ConversationBookmarks() {
             render: (_: unknown, row) => row.agent ? <span>{row.agent}<span className={styles.sub}>{agentWhere(row)}</span></span> : null,
           },
           { title: t("回合"), dataIndex: "turns" },
+          { title: "", fixed: "right" as const, render: (_: unknown, row) => <OpenLink href={conversationHref(row.conversation)} /> },
         ]}
       />
       <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onMore={list.loadMore} count={list.items.length} unit={t("個對話")} />

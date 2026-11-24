@@ -462,7 +462,10 @@
     "開始匯出": "Start export",
     "類別": "Category",
     "類型": "Type",
-    "顯示名稱": "Display name"
+    "顯示名稱": "Display name",
+    "查看": "View",
+    "查看 {0}": "View {0}",
+    "機器人名稱": "Robot name"
   },
   "pl": {
     "Agent 管理": "Zarządzanie agentami",
@@ -927,6 +930,9 @@
     "開始匯出": "Rozpocznij eksport",
     "類別": "Kategoria",
     "類型": "Typ",
-    "顯示名稱": "Wyświetlana nazwa"
+    "顯示名稱": "Wyświetlana nazwa",
+    "查看": "Pokaż",
+    "查看 {0}": "Pokaż {0}",
+    "機器人名稱": "Nazwa robota"
   }
 }

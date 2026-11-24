@@ -202,6 +202,7 @@ function AgentResults({ rows, hasFilters, restoredView, context }: {
   context: DirectoryContext;
 }) {
   const { t, locale } = useI18n();
+  const router = useRouter();
   const dateFormat = new Intl.DateTimeFormat(locale === "zh-Hant" ? "zh-TW" : locale, { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Taipei", hour12: false });
   const [visibleCount, setVisibleCount] = useState(() => {
     const anchorIndex = restoredView?.anchor ? rows.findIndex((row) => row.id === restoredView.anchor?.id) : -1;
@@ -240,6 +241,16 @@ function AgentResults({ rows, hasFilters, restoredView, context }: {
         rowKey="id"
         dataSource={rows.slice(0, visibleCount)}
         pagination={false}
+        onRow={(row) => ({
+          className: "agent-row",
+          onClick: (event) => {
+            if ((event.target as HTMLElement).closest("a, button, input, label") || window.getSelection()?.toString()) return;
+            const href = `/agents/${row.id}`;
+            if (event.ctrlKey || event.metaKey) { window.open(href, "_blank", "noopener"); return; }
+            rememberDirectoryView(context, row.id, Math.min(visibleCount, rows.length), results.current);
+            router.push(href);
+          },
+        })}
         locale={{
           emptyText: (
             <Empty
@@ -304,6 +315,21 @@ function AgentResults({ rows, hasFilters, restoredView, context }: {
             dataIndex: "updatedAt",
             className: "agent-updated-column",
             render: (value: string) => <time dateTime={value}>{dateFormat.format(new Date(value))}</time>,
+          },
+          {
+            title: "",
+            key: "open",
+            className: "agent-open-column",
+            render: (_, row) => (
+              <Link
+                className="agent-open"
+                href={`/agents/${row.id}`}
+                aria-label={t("查看 {0}", [row.name])}
+                onNavigate={() => rememberDirectoryView(context, row.id, Math.min(visibleCount, rows.length), results.current)}
+              >
+                {t("查看")}<span aria-hidden="true"> ›</span>
+              </Link>
+            ),
           },
         ]}
       />

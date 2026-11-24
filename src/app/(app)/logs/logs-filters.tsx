@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Checkbox, Input, Select } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { badRange, emptyFilters, filterParams, type ListFilters } from "@/lib/logs-format";
+import { useLogsResource } from "./logs-client";
 import { SearchSyntaxHelp } from "./logs-ui";
 import styles from "./logs.module.css";
 
@@ -33,6 +34,35 @@ export function useUrlFilters() {
 }
 
 /** Text that is applied on Enter or when it loses focus, not on every keystroke. */
+type RobotOption = { serial: string; name: string | null };
+
+/** Robots are picked by name; a serial that has no name, or is not among the recent ones, is still matched by its serial. */
+function RobotSelect({ value, onChange }: { value: string; onChange: (robot: string) => void }) {
+  const { t } = useI18n();
+  const robots = useLogsResource<{ items: RobotOption[] }>("/v1/robots");
+  const options = (robots.data?.items ?? [])
+    .filter((robot) => !robot.serial.startsWith("temp-"))
+    .map((robot) => ({ value: robot.serial, label: robot.name ?? robot.serial, serial: robot.serial }));
+  const known = options.find((option) => option.value === value);
+  return (
+    <Select
+      showSearch
+      allowClear
+      style={{ width: 190 }}
+      placeholder={t("機器人名稱")}
+      aria-label={t("機器人名稱")}
+      loading={robots.loading}
+      value={value || undefined}
+      onChange={(robot) => onChange(robot ?? "")}
+      options={value && !known ? [{ value, label: value, serial: value }, ...options] : options}
+      optionRender={(option) => (
+        <span>{option.label}{option.data.serial !== option.label && <span className={styles.sub}>{option.data.serial}</span>}</span>
+      )}
+      filterOption={(input, option) => `${option?.label ?? ""} ${option?.serial ?? ""}`.toLowerCase().includes(input.trim().toLowerCase())}
+    />
+  );
+}
+
 function CommitInput({ value, onCommit, ...props }: { value: string; onCommit: (value: string) => void } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange">) {
   const [draft, setDraft] = useState<{ from: string; text: string }>({ from: value, text: value });
   // A change from outside (Clear, Back) replaces what was being typed.
@@ -78,7 +108,7 @@ export function FilterBar({ filters, set, reset, bad, showStatus = false, showKi
             options={[{ value: "ok", label: t("成功") }, { value: "failed", label: t("失敗") }, { value: "no_response", label: t("無回應") }]}
           />
         )}
-        <CommitInput style={{ width: 150 }} allowClear value={filters.robot} placeholder={t("機器人序號")} aria-label={t("機器人序號")} onCommit={(robot) => set({ robot })} />
+        <RobotSelect value={filters.robot} onChange={(robot) => set({ robot })} />
         <Input style={{ width: 150 }} type="date" value={filters.since} aria-label={t("起日")} onChange={(e) => set({ since: e.target.value })} />
         <Input style={{ width: 150 }} type="date" value={filters.until} aria-label={t("迄日")} onChange={(e) => set({ until: e.target.value })} />
         <Checkbox checked={filters.bookmarked === "1"} onChange={(e) => set({ bookmarked: e.target.checked ? "1" : "" })}>{t("只看書籤")}</Checkbox>

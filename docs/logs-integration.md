@@ -10,7 +10,7 @@ Which projects are readable follows Studio permissions. A Studio administrator r
 
 Logs matches projects by the organization and project names carried by the captured agent lists, which equal the names Studio imported from the same registry. Renaming a project in Studio changes who can read its older turns until the Logs side learns the new name. Turns whose agent no list names belong to no project and are visible to administrators only.
 
-Analytics, capture status and Logs accounts add up every project, so they are administrator-only and ignore the header selection. The proxy forwards state-changing requests only when the `Origin` header matches the site.
+Analytics and capture status add up every project, so they are administrator-only and ignore the header selection. The proxy forwards state-changing requests only when the `Origin` header matches the site.
 
 ## Configuration
 
@@ -20,6 +20,6 @@ On the Logs host, set `STUDIO_SERVICE_TOKEN` in the stack's `.env`. On Studio, s
 
 ## Pages
 
-Conversations and turns have search with highlighting, runtime, robot, status and Taipei date filters, kept in the address so Back returns to the same search. A conversation opens as a window of turns that can grow in both directions, with a shared title, notes, bookmark, and per turn tags, notes and recordings. Speech events, bookmarks, exports, the feedback board, capture status and Logs accounts follow the original application.
+Conversations and turns have search with highlighting, runtime, robot, status and Taipei date filters, kept in the address so Back returns to the same search. A conversation opens as a window of turns that can grow in both directions, with a shared title, notes, bookmark, and per turn tags, notes and recordings. Speech events, bookmarks, exports, the feedback board and capture status follow the original application. Logs' own account list is not shown: who may open Logs, and which projects they read, is decided by Studio alone.
 
 Exports are made by the Logs worker and listed on the exports page. An export keeps the requester's scope with the task, so a file never holds turns the requester could not read when asking.
