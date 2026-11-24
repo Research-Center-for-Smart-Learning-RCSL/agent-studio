@@ -1,6 +1,6 @@
-# Sound
+# Music and sound
 
-The Agents page plays three piano pieces in a loop. Every page has click and dialog sounds, and a sound panel (the note button at the lower right) that sets the volume, turns the music off, and turns the effects off. The choice is kept per browser in `localStorage` under `agent-studio:audio`. Browsers refuse sound until the page has been touched once, so playback starts at the first click or key press.
+Three piano pieces play in a loop on every page; the player lives in the app layout, so moving between pages does not interrupt it. Every page also has click and dialog sounds, and a sound panel (the note button at the lower right) that sets the volume, turns the music off, and turns the effects off. The choice is kept per browser in `localStorage` under `agent-studio:audio`. Browsers refuse sound until the page has been touched once, so playback starts at the first click or key press.
 
 The recordings are in `public/music/`, converted from the originals to 96 kbps stereo mp3 with metadata removed. All three come from Musopen and carry no attribution requirement.
 

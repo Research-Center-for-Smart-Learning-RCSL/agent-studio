@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { Button, Slider, Switch } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { getAudioSettings, setAudioSettings, useAudioSettings } from "@/lib/audio-settings";
@@ -13,19 +12,16 @@ const tracks = [
   { src: "/music/nocturne-op55-no2.mp3", title: "Chopin, Nocturne Op. 55 No. 2" },
 ] as const;
 
-/** Click and dialog sounds on every page, background piano on the home page, and one panel to set the volume or turn either off. */
+/** Click and dialog sounds and the background piano on every page (the element lives in the layout, so a page change does not stop it), and one panel to set the volume or turn either off. */
 export function AppSound() {
   const { t } = useI18n();
   const settings = useAudioSettings();
-  const onHome = usePathname() === "/";
-  const onHomeRef = useRef(onHome);
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(0);
-  const getMusicOn = () => getAudioSettings().music && onHomeRef.current;
-  useEffect(() => { onHomeRef.current = onHome; }, [onHome]);
+  const getMusicOn = () => getAudioSettings().music;
 
   const next = useCallback((step: number) => setIndex((i) => (i + step + tracks.length) % tracks.length), []);
 
@@ -63,7 +59,7 @@ export function AppSound() {
   useEffect(() => {
     const element = audio.current;
     if (!element) return;
-    if (!settings.music || !onHome) {
+    if (!settings.music) {
       element.pause();
       return;
     }
@@ -79,7 +75,7 @@ export function AppSound() {
     };
     for (const name of events) window.addEventListener(name, retry);
     return () => { for (const name of events) window.removeEventListener(name, retry); };
-  }, [settings.music, onHome]);
+  }, [settings.music]);
 
   // A background tab stays quiet.
   useEffect(() => {
@@ -119,7 +115,6 @@ export function AppSound() {
               onChange={(value) => setAudioSettings({ volume: value / 100 })}
             />
           </div>
-          {onHome && (
           <div className={styles.track}>
             <span className={styles.title} aria-live="polite">{settings.music ? tracks[index].title : t("背景音樂已關閉")}</span>
             <span className={styles.skip}>
@@ -127,7 +122,6 @@ export function AppSound() {
               <Button size="small" type="text" aria-label={t("下一首")} disabled={!settings.music} onClick={() => next(1)}>›</Button>
             </span>
           </div>
-          )}
           <p className={styles.credit}>{t("鋼琴曲來自 Musopen，公有領域或 CC0。")}</p>
         </div>
       )}
