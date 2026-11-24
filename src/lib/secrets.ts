@@ -4,6 +4,7 @@ import { inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { secrets } from "@/db/schema";
 import { env } from "./env";
+import { credentialGranted, mcpCredentialReferences, resolveMcpCredentialFields } from "./mcp-credentials";
 
 function key(): Buffer {
   const k = Buffer.from(env.secretsKey, "base64");
@@ -25,34 +26,30 @@ export function decryptSecret(sealed: string): string {
   return Buffer.concat([decipher.update(body), decipher.final()]).toString("utf8");
 }
 
-/** Tool definitions reference credentials as `{{secret:NAME}}` inside any string value. */
-export const SECRET_REF = /\{\{secret:([A-Za-z0-9_.-]+)\}\}/g;
-
-export function secretNamesIn(value: unknown): Set<string> {
-  const names = new Set<string>();
-  for (const match of JSON.stringify(value ?? null).matchAll(SECRET_REF)) names.add(match[1]);
-  return names;
+async function authorizedToolSecrets(projectId: string, tools: Record<string, unknown>[]) {
+  const fields = tools.flatMap(mcpCredentialReferences);
+  if (!fields.length) return new Map<string, string>();
+  const names = [...new Set(fields.map(({ name }) => name))];
+  const rows = await db.select().from(secrets).where(inArray(secrets.name, names));
+  const credentials = new Map(rows.map((row) => [row.name, row]));
+  const authorized = new Map<string, string>();
+  for (const reference of fields) {
+    const row = credentials.get(reference.name);
+    if (!row || !credentialGranted(row.grants, projectId, reference)) {
+      throw new Error("MCP 憑證未授權給此專案、伺服器與欄位，請聯絡管理員");
+    }
+    authorized.set(reference.name, row.ciphertext);
+  }
+  return authorized;
 }
 
-/** Replace secret references with their values; unknown names throw. */
-export async function resolveSecrets<T>(value: T): Promise<T> {
-  const names = [...secretNamesIn(value)];
-  if (!names.length) return value;
-  const rows = await db.select().from(secrets).where(inArray(secrets.name, names));
-  const values = new Map(rows.map((r) => [r.name, decryptSecret(r.ciphertext)]));
-  const resolve = (v: unknown): unknown => {
-    if (typeof v === "string") {
-      return v.replace(SECRET_REF, (_, name: string) => {
-        const secret = values.get(name);
-        if (secret === undefined) throw new Error(`secret ${name} is not defined`);
-        return secret;
-      });
-    }
-    if (Array.isArray(v)) return v.map(resolve);
-    if (v && typeof v === "object") {
-      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, resolve(x)]));
-    }
-    return v;
-  };
-  return resolve(value) as T;
+export async function validateToolSecrets(projectId: string, tools: Record<string, unknown>[]) {
+  await authorizedToolSecrets(projectId, tools);
+}
+
+export async function resolveToolSecrets(projectId: string, tools: Record<string, unknown>[]) {
+  const authorized = await authorizedToolSecrets(projectId, tools);
+  if (!authorized.size) return tools;
+  const values = new Map([...authorized].map(([name, ciphertext]) => [name, decryptSecret(ciphertext)]));
+  return resolveMcpCredentialFields(tools, values);
 }

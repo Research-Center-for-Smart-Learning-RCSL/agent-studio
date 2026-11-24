@@ -1,0 +1,1 @@
+ALTER TABLE "secrets" ADD COLUMN "grants" jsonb DEFAULT '[]'::jsonb NOT NULL;

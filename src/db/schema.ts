@@ -12,6 +12,9 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { AgentSettings } from "@/lib/agent-settings";
+
+export type { AgentSettings };
 
 export const roleEnum = pgEnum("role", ["viewer", "editor"]);
 
@@ -93,17 +96,6 @@ export type InstructionMessage = {
   content: string | Record<string, unknown>[];
 };
 
-/** Model settings sent inline with each Responses API request. */
-export type AgentSettings = {
-  reasoning?: Record<string, unknown> | null;
-  text?: Record<string, unknown> | null;
-  temperature?: number | null;
-  top_p?: number | null;
-  max_output_tokens?: number | null;
-  truncation?: string | null;
-  parallel_tool_calls?: boolean | null;
-};
-
 export const agentVersions = pgTable(
   "agent_versions",
   {
@@ -123,10 +115,17 @@ export const agentVersions = pgTable(
   (t) => [primaryKey({ columns: [t.agentId, t.version] })],
 );
 
+export type SecretGrant = {
+  projectId: string;
+  serverUrl: string;
+  field: string;
+};
+
 export const secrets = pgTable("secrets", {
   name: text("name").primaryKey(),
   description: text("description").notNull().default(""),
   ciphertext: text("ciphertext").notNull(),
+  grants: jsonb("grants").$type<SecretGrant[]>().notNull().default([]),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

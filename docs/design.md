@@ -44,7 +44,7 @@ kebbi-browser-backend ----------+----> OpenAI Responses API (inline config)
 
 `agent_versions` holds one row per version: agent, version number (starting at 1 and contiguous per agent), model, instructions as an ordered JSON list of messages with a role (see Import), tools as JSON, model settings as JSON (reasoning effort, text format and verbosity, temperature, top_p, max output tokens), an optional change note, author, and creation time. Rows are never updated. Saving always inserts a new version; restoring an old version inserts a copy of it as the newest version, so history stays linear.
 
-`secrets` holds MCP server credentials, encrypted with a key from the environment. A tool definition refers to a secret by name instead of embedding it, so credentials never appear in version history, diffs, or the editor. The runtime API resolves the reference when it serves the configuration.
+`secrets` holds MCP server credentials, encrypted with a key from the environment. Administrators can grant a credential for a project, an exact HTTPS MCP server URL and either the `authorization` field or a named header such as `headers.x-api-key`. A tool configuration can reference the credential with `{{secret:NAME}}` in that field. Studio resolves authorized references when serving runtime configuration. Instructions, model settings and other tool fields preserve their literal text.
 
 `users` holds the Google email, display name, and an admin flag. `memberships` grants a user a role on one organization or one project; an organization role applies to all of its projects. Roles are `viewer` (read agents and history) and `editor` (also save, publish, archive). Admins manage memberships, secrets, and syncs, and can see everything. The initial admins come from an environment variable.
 
@@ -57,10 +57,14 @@ All runtime endpoints require `Authorization: Bearer <service token>` and are re
 | Method and path | Result |
 |---|---|
 | `GET /api/runtime/v1/projects/{rcsl_project_id}/agents` | Non-archived agents of the project: id, name, published version |
-| `GET /api/runtime/v1/agents/{id}` | Published version: id, version, model, instructions, tools (secrets resolved), settings |
+| `GET /api/runtime/v1/agents/{id}` | Published version, project and organization metadata, ordered role-tagged `messages`, and inline Responses fields in `request` |
 | `GET /api/runtime/v1/agents/{id}?version=N` | The given version, same shape |
 
 The list endpoint replaces `GET /openai/prompts/<project_id>` on the RCSL data API. Its rows keep the fields agent.rcsl.online already reads (`id`, `name`, `default_version`) so the selector code changes minimally.
+
+## Upgrading Studio and the application
+
+When upgrading the two services, first deploy the agent.rcsl.online backend that understands ordered Studio messages. Then apply the Studio migration and start the new Studio version. Before routing agent traffic to the new Studio instance, open **Admin / Credentials** and review **Published versions that need MCP credential grants**. For each trusted existing reference, grant the credential for its project, HTTPS MCP server URL and credential field. Existing encrypted values stay in place. The new runtime returns 422 for any unresolved or unauthorized credential reference.
 
 ## Changes to agent.rcsl.online
 
@@ -73,7 +77,7 @@ OpenAI documents no export for prompt objects. The import uses the same mechanis
 This was verified on 2026-11-22 against two prompts (`Agent designed for Quick Test`, versions 10 and 1, and `Test Files and Function`, version 6):
 
 - `instructions` comes back as a list of message items, not a string. Recent versions hold one `developer` message, older ones a `system` message, followed by an empty `user` message that the importer drops. The full text is present (12,642 characters for version 10). Studio therefore stores instructions as an ordered list of messages with a role, and the editor presents the common single-message case as one text area.
-- The Responses API accepts `instructions` in a request only as a string ("expected a string, but got an array"). The runtime API therefore joins the messages in order with blank lines. About 9% of imported versions have two or three messages, mostly a short `system` message followed by the main prompt written as a `user` message; joining them moves that text from the user role into the instructions, which matches what the authors evidently intended. A message with non-text parts cannot be joined, so Studio refuses to save it and the runtime API answers 422 for it; no imported version has one.
+- The runtime sends role-tagged messages through the Responses API `input` list in their original order, with a single plain developer message carried in `instructions`. The Studio response retains the old flattened text field for clients that read that field and emits structured messages separately. Supported image and file message parts remain in their original messages.
 - Sending the exported configuration inline reproduced the stored prompt exactly: 14,571 input tokens in both cases for version 10, once the tool fields the API rejects as request parameters were removed (image_generation `n`, and fields whose value is null).
 - `prompt.version` confirms which version answered, and explicitly requested old versions resolve, so history can be imported.
 - `model`, `reasoning` (effort, summary, and further fields), `text` (format, verbosity), `temperature`, and `top_p` reflect the prompt version.
@@ -82,9 +86,9 @@ This was verified on 2026-11-22 against two prompts (`Agent designed for Quick T
 
 Hosted shell tools are the one place where the echo is not the stored configuration. The prompt's `container_auto` environment comes back as a `container_reference` to the container OpenAI created for the probe, which expires about 20 minutes later and is then rejected ("Container is expired"). The exporter therefore reads that container right after each probe and rebuilds the spec: `memory_limit` and `network_policy` from the container object, and `file_ids` from the attached files, whose paths have the form `/mnt/data/<file id>-<file name>`. Skills attached to the environment appear neither in the echo nor in the container, so they cannot be recovered automatically. Among published versions only `AI家教老師 - 幫助你完成作業` uses them; adding its two project skills (`show-opening-image`, `file-understanding`) as `skill_reference` entries reproduced the stored prompt's 2,636 input tokens exactly, so that agent needs one manual version in Studio after import.
 
-All 224 published versions were then checked with `scripts/verify_inline_requests.py`, which sends the inline request and the stored prompt once each and compares input tokens. 214 match exactly. The 7 multi-message agents are 3 or 4 tokens short, the per-message overhead removed by joining the messages. The tutor agent above lacks its skills, and the 2 agents on retired models cannot be called at all. Streaming responses sometimes report zero input tokens, so the check uses non-streaming calls where the prompt allows them and repeats streaming measurements until both sides report a count.
+During the original migration, `scripts/verify_inline_requests.py` checked all 224 published versions and found 214 exact token-count matches. Seven multi-message agents lost 3 or 4 tokens with the original flattened format, the tutor agent lacked its skills, and two agents used retired models. The verifier now sends role-tagged input for multi-message configurations. Streaming responses sometimes report zero input tokens, so the verifier prefers a non-streaming call.
 
-MCP authorization is not echoed, so MCP tools are imported without credentials and an admin attaches the matching secret afterwards; only one of the 228 RCSL rows declares an MCP tool.
+MCP authorization is not echoed. An administrator needs to add the matching credential grant and reference after import. One of the 228 RCSL rows declares an MCP tool.
 
 Each call is billed for the whole prompt as input (about 14,600 input tokens for the largest sample), so importing every version of every agent costs roughly the number of versions times the average prompt length. The import is idempotent per agent and version, and must finish before 2026-11-30 while the prompt objects still resolve.
 

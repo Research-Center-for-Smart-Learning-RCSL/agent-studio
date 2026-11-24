@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, App, Button, Card, Form, Input, Popconfirm, Radio, Select, Space, Switch, Table, Tabs, Tag, Typography } from "antd";
+import type { SecretGrant } from "@/db/schema";
 import styles from "./admin-panel.module.css";
 import {
   addMembershipAction,
@@ -13,6 +14,7 @@ import {
   removeMembershipAction,
   setAdminAction,
   setSecretAction,
+  setSecretGrantAction,
   syncRcslAction,
   type ActionResult,
 } from "../../actions";
@@ -23,10 +25,10 @@ type Props = {
   memberships: { id: number; userEmail: string; organizationId: string | null; projectId: string | null; role: "viewer" | "editor" }[];
   organizations: { id: string; name: string; active: boolean }[];
   projects: { id: string; name: string; organizationId: string; active: boolean }[];
-  secrets: { name: string; description: string; updatedBy: string | null; updatedAt: string }[];
+  secrets: { name: string; description: string; grants: SecretGrant[]; updatedBy: string | null; updatedAt: string }[];
   audit: { id: number; actor: string | null; action: string; targetType: string; targetId: string; detail: unknown; createdAt: string }[];
   mcpWithoutSecret: { id: string; name: string; servers: string[] }[];
-  missingSecrets: string[];
+  unapprovedReferences: { id: string; name: string; projectId: string; serverUrl: string | null; field: string; secret: string }[];
 };
 
 const time = (value: string | null, locale: string) => (value ? new Date(value).toLocaleString(locale === "zh-Hant" ? "zh-TW" : locale, { hour12: false, timeZone: "Asia/Taipei" }) : "-");
@@ -180,10 +182,37 @@ function Secrets(props: Props) {
   const { t, locale } = useI18n();
   const act = useAction();
   const [form] = Form.useForm<{ name: string; value: string; description: string }>();
+  const [grantForm] = Form.useForm<SecretGrant & { name: string }>();
+  const projectLabel = (id: string) => {
+    const project = props.projects.find((item) => item.id === id);
+    const organization = props.organizations.find((item) => item.id === project?.organizationId);
+    return project ? [organization?.name, project.name].filter(Boolean).join(" / ") : id;
+  };
   return (
     <div className={styles.stack}>
-      {props.missingSecrets.length > 0 && (
-        <Alert type="error" title={t("發布中的 agent 參照了尚未設定的憑證：{0}。學生端會無法取得這些 agent。", [props.missingSecrets.join(", ")])} />
+      {props.unapprovedReferences.length > 0 && (
+        <Alert
+          type="error"
+          title={t("以下發布版本需要 MCP 憑證授權")}
+          description={
+            <ul style={{ margin: 0 }}>
+              {props.unapprovedReferences.map((reference, index) => (
+                <li key={`${reference.id}-${index}`}>
+                  <Link href={`/agents/${reference.id}`}>{reference.name}</Link>
+                  {" · "}{projectLabel(reference.projectId)}{" · "}
+                  <code>{reference.secret}</code>{" · "}
+                  <code>{reference.serverUrl ?? t("需要 HTTPS MCP 伺服器網址")}</code>{" · "}
+                  <code>{reference.field}</code>
+                  {reference.serverUrl && props.secrets.some((secret) => secret.name === reference.secret) && (
+                    <Button type="link" size="small" onClick={() => grantForm.setFieldsValue({
+                      name: reference.secret, projectId: reference.projectId, serverUrl: reference.serverUrl!, field: reference.field,
+                    })}>{t("填入授權資料")}</Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          }
+        />
       )}
       {props.mcpWithoutSecret.length > 0 && (
         <Alert
@@ -202,7 +231,8 @@ function Secrets(props: Props) {
       )}
       <Card size="small" title={t("新增或更新憑證")} className={styles.card}>
         <Typography.Paragraph type="secondary" className={styles.formHint}>
-          {t("在工具設定的任何字串欄位寫")}{" "}<code>{"{{secret:name}}"}</code>{" "}{t("，例如 MCP 的")}{" "}<code>{'"authorization": "{{secret:rcsl_mcp_token}}"'}</code>{" "}{t("。實際值加密儲存，只在學生端讀取設定時代入，編輯器和版本紀錄都看不到。")}</Typography.Paragraph>
+          {t("將憑證授權給指定的專案、HTTPS MCP 伺服器和欄位後，工具就能使用")}{" "}<code>{"{{secret:name}}"}</code>{"。"}
+        </Typography.Paragraph>
         <Form
           className={styles.form}
           form={form}
@@ -226,6 +256,33 @@ function Secrets(props: Props) {
             {t("儲存")}</Button>
         </Form>
       </Card>
+      <Card size="small" title={t("授權 MCP 憑證")} className={styles.card}>
+        <Form
+          className={styles.form}
+          form={grantForm}
+          layout="inline"
+          size="small"
+          initialValues={{ field: "authorization" }}
+          onFinish={async ({ name, ...grant }) => {
+            const result = await act(setSecretGrantAction(name, grant, true), t("已儲存"));
+            if (result.ok) grantForm.resetFields();
+          }}
+        >
+          <Form.Item name="name" className={styles.field} rules={[{ required: true }]}>
+            <Select aria-label={t("憑證")} placeholder={t("憑證")} options={props.secrets.map(({ name }) => ({ value: name, label: name }))} />
+          </Form.Item>
+          <Form.Item name="projectId" className={styles.field} rules={[{ required: true }]}>
+            <Select aria-label={t("專案")} placeholder={t("專案")} options={props.projects.map(({ id }) => ({ value: id, label: projectLabel(id) }))} />
+          </Form.Item>
+          <Form.Item name="serverUrl" className={styles.field} rules={[{ required: true }]}>
+            <Input aria-label={t("HTTPS MCP 伺服器網址")} placeholder={t("HTTPS MCP 伺服器網址")} />
+          </Form.Item>
+          <Form.Item name="field" className={styles.field} rules={[{ required: true }]}>
+            <Input aria-label={t("MCP 憑證欄位")} placeholder="authorization / headers.x-api-key" />
+          </Form.Item>
+          <Button type="primary" htmlType="submit">{t("儲存")}</Button>
+        </Form>
+      </Card>
       <Table
         scroll={{ x: "max-content" }}
         rowKey="name"
@@ -235,6 +292,21 @@ function Secrets(props: Props) {
         columns={[
           { title: t("名稱"), dataIndex: "name", render: (n: string) => <code>{n}</code> },
           { title: t("說明"), dataIndex: "description" },
+          {
+            title: t("MCP 憑證授權"),
+            render: (_, secret) => (
+              <Space orientation="vertical" size={0}>
+                {secret.grants.map((grant) => (
+                  <span key={`${grant.projectId}/${grant.serverUrl}/${grant.field}`}>
+                    {projectLabel(grant.projectId)}{" · "}<code>{grant.serverUrl}</code>{" · "}<code>{grant.field}</code>
+                    <Popconfirm title={t("撤銷此 MCP 憑證授權？")} onConfirm={() => act(setSecretGrantAction(secret.name, grant, false), t("已刪除"))}>
+                      <Button size="small" type="link" danger>{t("撤銷")}</Button>
+                    </Popconfirm>
+                  </span>
+                ))}
+              </Space>
+            ),
+          },
           { title: t("更新者"), dataIndex: "updatedBy", width: 220 },
           { title: t("更新時間"), width: 170, render: (_, s) => time(s.updatedAt, locale) },
           {
