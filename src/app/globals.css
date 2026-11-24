@@ -591,8 +591,9 @@ a {
 .agent-editor-settings-col.is-instructions-active .agent-editor-settings-card > .ant-card-body { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
 .agent-editor-settings-col.is-instructions-active .ant-tabs { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
 .agent-editor-settings-col.is-instructions-active .ant-tabs-content-holder { display: flex; flex: 1 1 auto; min-height: 0; }
-.agent-editor-settings-col.is-instructions-active .ant-tabs-content { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
-.agent-editor-settings-col.is-instructions-active .ant-tabs-tabpane-active { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
+/* Only the active pane may be a flex column: antd keeps visited panes mounted and hides them with display:none, which a blanket display:flex would override. */
+.agent-editor-settings-col.is-instructions-active .ant-tabs-content.ant-tabs-content-active { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
+.agent-editor-settings-col.is-instructions-active .ant-tabs-content:not(.ant-tabs-content-active) { display: none; }
 .instructions-editor-body:not(.is-multi) { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
 .instructions-editor-body:not(.is-multi) .instructions-editor-message { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
 .instructions-editor-body:not(.is-multi) .instructions-monaco { display: flex; flex: 1 1 auto; min-width: 0; min-height: 240px; height: auto; }
