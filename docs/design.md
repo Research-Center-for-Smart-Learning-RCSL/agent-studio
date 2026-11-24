@@ -1,10 +1,10 @@
-# Agent Studio design
+# RCSL Agent Studio design
 
 ## Purpose
 
 OpenAI retires `/v1/prompts` and reusable prompt objects on 2026-11-30. agent.rcsl.online (the student runtime, container `kebbi-browser-backend`) currently sends `prompt={"id": "pmpt_..."}` to the Responses API, and the instructions, model, and tool configuration of all 228 agents exist only as those OpenAI prompt objects. After the retirement the Responses API itself remains, but each request must carry the model, instructions, and tools inline.
 
-Agent Studio replaces the OpenAI prompt dashboard. Authors edit agents in it, every save produces an immutable version, and the runtime reads the published version of an agent from it and sends the content inline. The runtime keeps parsing RCSL control tags (`[ACTION]`, `[FINISH]`, and so on), so student-facing behavior does not change. Agent Studio is served at `studio.rcsl.online`.
+RCSL Agent Studio replaces the OpenAI prompt dashboard. Authors edit agents in it, every save produces an immutable version, and the runtime reads the published version of an agent from it and sends the content inline. The runtime keeps parsing RCSL control tags (`[ACTION]`, `[FINISH]`, and so on), so student-facing behavior does not change. RCSL Agent Studio is served at `studio.rcsl.online`.
 
 ## Scope
 
@@ -15,7 +15,7 @@ The first release covers the full author workflow, not a stopgap:
 3. Google sign-in and per-organization and per-project permissions.
 4. A runtime API that agent.rcsl.online reads, plus the change to agent.rcsl.online that consumes it.
 
-Organizations, projects, and the organization OpenAI API keys stay in the RCSL data API (`192.168.100.18:8887`). Agent Studio mirrors organization and project names and identifiers from it and never stores the API keys, because the runtime already resolves them.
+Organizations, projects, and the organization OpenAI API keys stay in the RCSL data API (`192.168.100.18:8887`). RCSL Agent Studio mirrors organization and project names and identifiers from it and never stores the API keys, because the runtime already resolves them.
 
 ## Terms
 
@@ -23,7 +23,7 @@ An **agent** is what OpenAI called a prompt: a named configuration belonging to 
 
 ## Architecture
 
-Agent Studio is a single Next.js application (App Router, TypeScript) with its own PostgreSQL database, deployed as two containers on lab-100-18 and exposed through the existing Nginx Proxy Manager as `studio.rcsl.online`. Server components and route handlers access the database through Drizzle ORM. Authentication uses Auth.js with the Google provider.
+RCSL Agent Studio is a single Next.js application (App Router, TypeScript) with its own PostgreSQL database, deployed as two containers on lab-100-18 and exposed through the existing Nginx Proxy Manager as `studio.rcsl.online`. Server components and route handlers access the database through Drizzle ORM. Authentication uses Auth.js with the Google provider.
 
 The runtime does not depend on the Studio user interface. It calls a small read-only HTTP API with a service token, caches each agent configuration, and keeps serving the last configuration it fetched if Studio is unreachable. A Studio outage therefore blocks editing but not classes in progress.
 

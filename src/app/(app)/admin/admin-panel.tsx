@@ -1,12 +1,15 @@
 "use client";
+import { useI18n } from "@/lib/i18n-client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, App, Button, Card, Form, Input, Popconfirm, Radio, Select, Space, Switch, Table, Tabs, Tag, Typography } from "antd";
+import styles from "./admin-panel.module.css";
 import {
   addMembershipAction,
   deleteSecretAction,
+  deleteUserAction,
   removeMembershipAction,
   setAdminAction,
   setSecretAction,
@@ -26,18 +29,21 @@ type Props = {
   missingSecrets: string[];
 };
 
-const time = (t: string | null) => (t ? new Date(t).toLocaleString("zh-TW", { hour12: false }) : "-");
+const time = (value: string | null, locale: string) => (value ? new Date(value).toLocaleString(locale === "zh-Hant" ? "zh-TW" : locale, { hour12: false, timeZone: "Asia/Taipei" }) : "-");
 
 export function AdminPanel(props: Props) {
+  const { t } = useI18n();
   return (
-    <App>
-      <Typography.Title level={3}>管理</Typography.Title>
+    <App className={styles.page}>
       <Tabs
+        size="small"
+        tabBarGutter={16}
+        tabBarExtraContent={{ left: <h1 className={styles.title}>{t("管理")}</h1> }}
         items={[
-          { key: "members", label: "成員與權限", children: <Members {...props} /> },
-          { key: "secrets", label: "憑證", children: <Secrets {...props} /> },
-          { key: "sync", label: "RCSL 同步", children: <Sync {...props} /> },
-          { key: "audit", label: "操作紀錄", children: <Audit {...props} /> },
+          { key: "members", label: t("成員與權限"), children: <Members {...props} /> },
+          { key: "secrets", label: t("憑證"), children: <Secrets {...props} /> },
+          { key: "sync", label: t("RCSL 同步"), children: <Sync {...props} /> },
+          { key: "audit", label: t("操作紀錄"), children: <Audit {...props} /> },
         ]}
       />
     </App>
@@ -45,11 +51,12 @@ export function AdminPanel(props: Props) {
 }
 
 function useAction() {
+  const { error } = useI18n();
   const router = useRouter();
   const { message } = App.useApp();
   return async <T,>(p: Promise<ActionResult<T>>, ok?: string) => {
     const r = await p;
-    if (!r.ok) message.error(r.error);
+    if (!r.ok) message.error(error(r.error));
     else {
       if (ok) message.success(ok);
       router.refresh();
@@ -59,6 +66,7 @@ function useAction() {
 }
 
 function Members(props: Props) {
+  const { t, locale } = useI18n();
   const act = useAction();
   const [form] = Form.useForm<{ email: string; scope: "organization" | "project"; scopeId: string; role: "viewer" | "editor" }>();
   const scope = Form.useWatch("scope", form) ?? "organization";
@@ -66,34 +74,38 @@ function Members(props: Props) {
   const projectName = new Map(props.projects.map((p) => [p.id, `${orgName.get(p.organizationId)} / ${p.name}`]));
 
   return (
-    <Space orientation="vertical" style={{ width: "100%" }} size="large">
-      <Card size="small" title="授權">
+    <div className={styles.stack}>
+      <Card size="small" title={t("授權")} className={styles.card}>
         <Form
+          className={styles.form}
           form={form}
           layout="inline"
+          size="small"
           initialValues={{ scope: "organization", role: "editor" }}
           onFinish={async (values) => {
-            const r = await act(addMembershipAction(values), "已授權");
+            const r = await act(addMembershipAction(values), t("已授權"));
             if (r.ok) form.resetFields(["email", "scopeId"]);
           }}
         >
-          <Form.Item name="email" rules={[{ required: true, type: "email" }]}>
-            <Input placeholder="Google 帳號 email" style={{ width: 240 }} />
+          <Form.Item name="email" className={styles.field} rules={[{ required: true, type: "email" }]}>
+            <Input aria-label={t("Google 帳號 email")} placeholder={t("Google 帳號 email")} />
           </Form.Item>
           <Form.Item name="scope">
             <Radio.Group
               options={[
-                { value: "organization", label: "整個組織" },
-                { value: "project", label: "單一專案" },
+                { value: "organization", label: t("整個組織") },
+                { value: "project", label: t("單一專案") },
               ]}
               onChange={() => form.setFieldValue("scopeId", undefined)}
             />
           </Form.Item>
-          <Form.Item name="scopeId" rules={[{ required: true }]}>
+          <Form.Item name="scopeId" className={styles.scope} rules={[{ required: true }]}>
             <Select
-              style={{ width: 360 }}
+              aria-label={scope === "organization" ? t("選擇組織") : t("選擇專案")}
+              popupMatchSelectWidth={480}
+              classNames={{ popup: { root: "admin-scope-dropdown" } }}
               showSearch={{ optionFilterProp: "label" }}
-              placeholder={scope === "organization" ? "選擇組織" : "選擇專案"}
+              placeholder={scope === "organization" ? t("選擇組織") : t("選擇專案")}
               options={
                 scope === "organization"
                   ? props.organizations.map((o) => ({ value: o.id, label: o.name }))
@@ -102,28 +114,29 @@ function Members(props: Props) {
             />
           </Form.Item>
           <Form.Item name="role">
-            <Select
-              style={{ width: 110 }}
+            <Radio.Group
+              optionType="button"
+              buttonStyle="solid"
               options={[
-                { value: "editor", label: "可編輯" },
-                { value: "viewer", label: "只能檢視" },
+                { value: "editor", label: t("可編輯") },
+                { value: "viewer", label: t("只能檢視") },
               ]}
             />
           </Form.Item>
           <Button type="primary" htmlType="submit">
-            授權
-          </Button>
+            {t("授權")}</Button>
         </Form>
       </Card>
       <Table
+        scroll={{ x: "max-content" }}
         rowKey="email"
         size="small"
         dataSource={props.users}
         pagination={false}
         columns={[
-          { title: "帳號", dataIndex: "email", render: (e: string, u) => <Space orientation="vertical" size={0}>{e}<Typography.Text type="secondary" style={{ fontSize: 12 }}>{u.name}</Typography.Text></Space> },
+          { title: t("帳號"), dataIndex: "email", render: (e: string, u) => <Space orientation="vertical" size={0}>{e}<Typography.Text type="secondary" style={{ fontSize: 12 }}>{u.name}</Typography.Text></Space> },
           {
-            title: "權限",
+            title: t("權限"),
             render: (_, u) => (
               <Space wrap size={4}>
                 {props.memberships
@@ -135,41 +148,47 @@ function Members(props: Props) {
                       closable
                       onClose={(e) => {
                         e.preventDefault();
-                        act(removeMembershipAction(m.id), "已移除");
+                        act(removeMembershipAction(m.id), t("已移除"));
                       }}
                     >
-                      {m.organizationId ? `組織：${orgName.get(m.organizationId)}` : `專案：${projectName.get(m.projectId!)}`}（{m.role === "editor" ? "編輯" : "檢視"}）
+                      {m.organizationId ? t("組織：{0}", [orgName.get(m.organizationId)]) : t("專案：{0}", [projectName.get(m.projectId!)])}（{m.role === "editor" ? t("編輯") : t("檢視")}）
                     </Tag>
                   ))}
               </Space>
             ),
           },
           {
-            title: "管理員",
+            title: t("管理員"),
             width: 90,
             render: (_, u) => (
               <Switch size="small" checked={u.isAdmin} disabled={u.email === props.me} onChange={(on) => act(setAdminAction(u.email, on))} />
             ),
           },
-          { title: "最近登入", width: 170, render: (_, u) => time(u.lastSeenAt) },
+          { title: t("最近登入"), width: 170, render: (_, u) => time(u.lastSeenAt, locale) },
+          { title: t("操作"), width: 80, render: (_, u) => u.email === props.me ? null : (
+            <Popconfirm title={t("刪除 {0}？", [u.email])} description={t("此帳號的所有組織及專案權限也會移除；再次登入會重新建立帳號；環境設定中的管理員仍會自動取得管理員權限。")} okText={t("刪除")} cancelText={t("取消")} onConfirm={() => act(deleteUserAction(u.email), t("帳號已刪除"))}>
+              <Button size="small" type="link" danger>{t("刪除")}</Button>
+            </Popconfirm>
+          ) },
         ]}
       />
-    </Space>
+    </div>
   );
 }
 
 function Secrets(props: Props) {
+  const { t, locale } = useI18n();
   const act = useAction();
   const [form] = Form.useForm<{ name: string; value: string; description: string }>();
   return (
-    <Space orientation="vertical" style={{ width: "100%" }} size="large">
+    <div className={styles.stack}>
       {props.missingSecrets.length > 0 && (
-        <Alert type="error" title={`發布中的 agent 參照了尚未設定的憑證：${props.missingSecrets.join(", ")}。學生端會無法取得這些 agent。`} />
+        <Alert type="error" title={t("發布中的 agent 參照了尚未設定的憑證：{0}。學生端會無法取得這些 agent。", [props.missingSecrets.join(", ")])} />
       )}
       {props.mcpWithoutSecret.length > 0 && (
         <Alert
           type="warning"
-          title="以下發布中的 agent 有 MCP 工具但沒有設定憑證。從 OpenAI 匯入時拿不到 MCP 的授權資訊，如果該伺服器需要授權，請在工具設定中加上憑證參照。"
+          title={t("以下發布中的 agent 有 MCP 工具但沒有設定憑證。從 OpenAI 匯入時拿不到 MCP 的授權資訊，如果該伺服器需要授權，請在工具設定中加上憑證參照。")}
           description={
             <ul style={{ margin: 0 }}>
               {props.mcpWithoutSecret.map((a) => (
@@ -181,99 +200,100 @@ function Secrets(props: Props) {
           }
         />
       )}
-      <Card size="small" title="新增或更新憑證">
-        <Typography.Paragraph type="secondary">
-          在工具設定的任何字串欄位寫 <code>{"{{secret:名稱}}"}</code>，例如 MCP 的 <code>{'"authorization": "{{secret:rcsl_mcp_token}}"'}</code>。實際值加密儲存，只在學生端讀取設定時代入，編輯器和版本紀錄都看不到。
-        </Typography.Paragraph>
+      <Card size="small" title={t("新增或更新憑證")} className={styles.card}>
+        <Typography.Paragraph type="secondary" className={styles.formHint}>
+          {t("在工具設定的任何字串欄位寫")}{" "}<code>{"{{secret:name}}"}</code>{" "}{t("，例如 MCP 的")}{" "}<code>{'"authorization": "{{secret:rcsl_mcp_token}}"'}</code>{" "}{t("。實際值加密儲存，只在學生端讀取設定時代入，編輯器和版本紀錄都看不到。")}</Typography.Paragraph>
         <Form
+          className={styles.form}
           form={form}
           layout="inline"
+          size="small"
           onFinish={async (values) => {
-            const r = await act(setSecretAction({ ...values, description: values.description ?? "" }), "已儲存");
+            const r = await act(setSecretAction({ ...values, description: values.description ?? "" }), t("已儲存"));
             if (r.ok) form.resetFields();
           }}
         >
-          <Form.Item name="name" rules={[{ required: true }]}>
-            <Input placeholder="名稱" style={{ width: 200 }} />
+          <Form.Item name="name" className={styles.field} rules={[{ required: true }]}>
+            <Input aria-label={t("名稱")} placeholder={t("名稱")} />
           </Form.Item>
-          <Form.Item name="value" rules={[{ required: true }]}>
-            <Input.Password placeholder="值" style={{ width: 280 }} autoComplete="new-password" />
+          <Form.Item name="value" className={styles.field} rules={[{ required: true }]}>
+            <Input.Password aria-label={t("值")} placeholder={t("值")} autoComplete="new-password" />
           </Form.Item>
-          <Form.Item name="description">
-            <Input placeholder="說明（選填）" style={{ width: 240 }} />
+          <Form.Item name="description" className={styles.field}>
+            <Input aria-label={t("說明（選填）")} placeholder={t("說明（選填）")} />
           </Form.Item>
           <Button type="primary" htmlType="submit">
-            儲存
-          </Button>
+            {t("儲存")}</Button>
         </Form>
       </Card>
       <Table
+        scroll={{ x: "max-content" }}
         rowKey="name"
         size="small"
         pagination={false}
         dataSource={props.secrets}
         columns={[
-          { title: "名稱", dataIndex: "name", render: (n: string) => <code>{n}</code> },
-          { title: "說明", dataIndex: "description" },
-          { title: "更新者", dataIndex: "updatedBy", width: 220 },
-          { title: "更新時間", width: 170, render: (_, s) => time(s.updatedAt) },
+          { title: t("名稱"), dataIndex: "name", render: (n: string) => <code>{n}</code> },
+          { title: t("說明"), dataIndex: "description" },
+          { title: t("更新者"), dataIndex: "updatedBy", width: 220 },
+          { title: t("更新時間"), width: 170, render: (_, s) => time(s.updatedAt, locale) },
           {
             title: "",
             width: 80,
             render: (_, s) => (
-              <Popconfirm title={`刪除 ${s.name}？`} description="參照它的 agent 會無法被學生端取得。" onConfirm={() => act(deleteSecretAction(s.name), "已刪除")}>
+              <Popconfirm title={t("刪除 {0}？", [s.name])} description={t("參照它的 agent 會無法被學生端取得。")} onConfirm={() => act(deleteSecretAction(s.name), t("已刪除"))}>
                 <Button size="small" type="link" danger>
-                  刪除
-                </Button>
+                  {t("刪除")}</Button>
               </Popconfirm>
             ),
           },
         ]}
       />
-    </Space>
+    </div>
   );
 }
 
 function Sync(props: Props) {
+  const { t } = useI18n();
   const act = useAction();
   const [busy, setBusy] = useState(false);
   const inactive = props.projects.filter((p) => !p.active).length;
   return (
-    <Space orientation="vertical" style={{ width: "100%" }}>
-      <Typography.Paragraph>
-        組織與專案以 RCSL 為準。目前有 {props.organizations.length} 個組織、{props.projects.length} 個專案
-        {inactive > 0 && `（其中 ${inactive} 個已不在 RCSL，標記為停用）`}。
-      </Typography.Paragraph>
+    <div className={styles.sync}>
+      <p>
+        {t("組織與專案以 RCSL 為準。目前有 {0} 個組織、{1} 個專案。", [props.organizations.length, props.projects.length])} {inactive > 0 && t("（其中 {0} 個已不在 RCSL，標記為停用）", [inactive])}
+      </p>
       <Button
         loading={busy}
         onClick={async () => {
           setBusy(true);
-          await act(syncRcslAction(), "同步完成");
+          await act(syncRcslAction(), t("同步完成"));
           setBusy(false);
         }}
       >
-        立即從 RCSL 同步
-      </Button>
-    </Space>
+        {t("立即從 RCSL 同步")}</Button>
+    </div>
   );
 }
 
 function Audit(props: Props) {
+  const { t, locale } = useI18n();
   return (
     <Table
+      scroll={{ x: "max-content" }}
       rowKey="id"
       size="small"
       dataSource={props.audit}
       pagination={{ pageSize: 50 }}
       columns={[
-        { title: "時間", width: 170, render: (_, a) => time(a.createdAt) },
-        { title: "操作者", dataIndex: "actor", width: 220 },
-        { title: "動作", dataIndex: "action", width: 180 },
+        { title: t("時間"), width: 170, render: (_, a) => time(a.createdAt, locale) },
+        { title: t("操作者"), dataIndex: "actor", width: 220 },
+        { title: t("動作"), dataIndex: "action", width: 180 },
         {
-          title: "對象",
+          title: t("對象"),
           render: (_, a) => (a.targetType === "agent" ? <Link href={`/agents/${a.targetId}`}>{a.targetId}</Link> : `${a.targetType}: ${a.targetId}`),
         },
-        { title: "內容", render: (_, a) => (a.detail ? <code style={{ fontSize: 12 }}>{JSON.stringify(a.detail)}</code> : null) },
+        { title: t("內容"), render: (_, a) => (a.detail ? <code style={{ fontSize: 12 }}>{JSON.stringify(a.detail)}</code> : null) },
       ]}
     />
   );

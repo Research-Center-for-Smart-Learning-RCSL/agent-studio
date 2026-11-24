@@ -37,6 +37,7 @@ export default async function HomePage(props: PageProps<"/">) {
       editableProjects={editableProjects}
       includeArchived={includeArchived}
       hasAnyAccess={hasAnyAccess}
+      userEmail={user.email}
     />
   );
 }

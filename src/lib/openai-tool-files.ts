@@ -56,7 +56,7 @@ export async function uploadToolFiles(access: ToolFileAccess, files: File[], mod
     const response = await provider(access, "vector_stores", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Agent Studio attachments", file_ids: created.map((file) => file.id) }),
+      body: JSON.stringify({ name: "RCSL Agent Studio attachments", file_ids: created.map((file) => file.id) }),
       signal,
     });
     const store = await response.json();

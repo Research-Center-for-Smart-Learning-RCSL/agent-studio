@@ -1,4 +1,4 @@
-# Agent Studio
+# RCSL Agent Studio
 
 Authoring and versioning for RCSL agents, replacing the OpenAI prompt dashboard that is retired on 2026-11-30. Authors edit agents at `studio.rcsl.online`; agent.rcsl.online reads the published version through the runtime API and sends it inline to the Responses API. The design, data model, and the verified import method are in [docs/design.md](docs/design.md).
 

@@ -5,21 +5,21 @@ import type { ReactNode } from "react";
 
 const theme: ThemeConfig = {
   token: {
-    colorPrimary: "#0d6b53",
-    colorLink: "#0d6b53",
-    colorText: "#172924",
-    colorTextSecondary: "#526760",
-    colorBorder: "#d2ded8",
+    colorPrimary: "#4b6780",
+    colorLink: "#4b6780",
+    colorText: "#253544",
+    colorTextSecondary: "#526473",
+    colorBorder: "#cbd5dd",
     borderRadius: 8,
     controlHeight: 38,
     fontFamily: "var(--studio-font)",
   },
   components: {
     Table: {
-      headerBg: "#f1f6f3",
-      headerColor: "#40574e",
-      rowHoverBg: "#f4faf7",
-      borderColor: "#e5ede8",
+      headerBg: "#edf2f5",
+      headerColor: "#405464",
+      rowHoverBg: "#f1f5f8",
+      borderColor: "#e1e8ed",
     },
   },
 };

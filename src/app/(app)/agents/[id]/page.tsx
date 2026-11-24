@@ -38,6 +38,7 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
   return (
     <AgentEditor
       key={`${id}@${selected?.version ?? 0}`}
+      userEmail={user.email}
       agent={{
         id: found.agent.id,
         name: found.agent.name,
