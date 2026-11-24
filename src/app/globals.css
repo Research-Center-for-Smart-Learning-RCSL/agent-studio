@@ -750,10 +750,11 @@ a {
   transition: width 0.18s ease;
 }
 .studio-sidebar.is-collapsed { width: 68px; }
-.studio-sidebar-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; gap: 4px; }
+.studio-sidebar-top { display: flex; align-items: center; min-height: 40px; gap: 4px; min-width: 0; }
+.studio-sidebar-top .studio-brand { flex: 1 1 auto; min-width: 0; gap: 6px; overflow: hidden; font-size: 15px; }
 .studio-sidebar .studio-brand { padding-inline: 4px; min-height: 40px; }
 .studio-brand-name { overflow: hidden; text-overflow: ellipsis; }
-.studio-collapse-top { width: 36px; min-height: 36px; padding: 0; justify-content: center; }
+.studio-collapse-top { flex: none; width: 28px; min-width: 28px; min-height: 28px; height: 28px; padding: 0; justify-content: center; }
 
 .studio-nav { display: flex; flex-direction: column; gap: 4px; }
 .studio-nav a,
