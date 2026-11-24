@@ -254,7 +254,11 @@
     "讀取工作區中的檔案": "Read a file from the workspace",
     "將檔案存入工作區並回傳網址": "Save a file into the workspace and return its URL",
     "執行環境不會執行": "Not executed by runtime",
-    "執行環境沒有此函式的處理程式，模型呼叫時只會得到「Unknown tool」。": "The runtime has no handler for this function; when the model calls it, it only gets \"Unknown tool\"."
+    "執行環境沒有此函式的處理程式，模型呼叫時只會得到「Unknown tool」。": "The runtime has no handler for this function; when the model calls it, it only gets \"Unknown tool\".",
+    "開啟選單": "Open menu",
+    "展開側欄": "Expand sidebar",
+    "收合側欄": "Collapse sidebar",
+    "Logs 整合進行中，尚未連線。": "Logs integration is in progress and is not connected yet."
   },
   "pl": {
     "Agent 管理": "Zarządzanie agentami",
@@ -511,6 +515,10 @@
     "讀取工作區中的檔案": "Odczytaj plik z obszaru roboczego",
     "將檔案存入工作區並回傳網址": "Zapisz plik w obszarze roboczym i zwróć jego adres URL",
     "執行環境不會執行": "Nie jest wykonywana przez środowisko",
-    "執行環境沒有此函式的處理程式，模型呼叫時只會得到「Unknown tool」。": "Środowisko nie ma obsługi tej funkcji; gdy model ją wywoła, otrzyma tylko \"Unknown tool\"."
+    "執行環境沒有此函式的處理程式，模型呼叫時只會得到「Unknown tool」。": "Środowisko nie ma obsługi tej funkcji; gdy model ją wywoła, otrzyma tylko \"Unknown tool\".",
+    "開啟選單": "Otwórz menu",
+    "展開側欄": "Rozwiń pasek boczny",
+    "收合側欄": "Zwiń pasek boczny",
+    "Logs 整合進行中，尚未連線。": "Integracja Logs jest w toku i nie jest jeszcze połączona."
   }
 }
