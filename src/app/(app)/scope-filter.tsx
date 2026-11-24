@@ -39,6 +39,8 @@ export function ScopeFilter({ projects, userEmail }: { projects: Project[]; user
         setOrganization(org);
         setProject(proj);
       });
+      // The stored choice may name a project that is gone or no longer readable; keep what the header shows.
+      if (saved && (saved.organization !== org || saved.project !== proj)) localStorage.setItem(storageKey, JSON.stringify({ organization: org, project: proj }));
       announceScope({ organization: org, project: proj });
     } catch { /* Storage can be unavailable or stale. */ }
   }, [projects, storageKey]);

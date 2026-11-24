@@ -19,10 +19,12 @@ export function LogsProvider({ userEmail, children }: { userEmail: string; child
       const parsed = JSON.parse(localStorage.getItem(key) ?? "null") as LogsScope | null;
       saved = { organization: parsed?.organization || undefined, project: parsed?.project || undefined };
     } catch { /* Storage can be unavailable or stale. */ }
-    queueMicrotask(() => setState({ scope: saved, ready: true }));
+    // A re-announcement of the same choice keeps the same object, so open windows are not reset.
+    const adopt = (next: LogsScope) => setState((now) => now.ready && now.scope.organization === next.organization && now.scope.project === next.project ? now : { scope: next, ready: true });
+    queueMicrotask(() => adopt(saved));
     const follow = (event: Event) => {
       const detail = ((event as CustomEvent).detail ?? {}) as LogsScope;
-      setState({ scope: { organization: detail.organization || undefined, project: detail.project || undefined }, ready: true });
+      adopt({ organization: detail.organization || undefined, project: detail.project || undefined });
     };
     window.addEventListener("agent-studio-scope", follow);
     return () => window.removeEventListener("agent-studio-scope", follow);
@@ -48,7 +50,7 @@ export function logsUrl(path: string, params: Params, scope: LogsScope): string 
   if (scope.organization) search.set("studio_org", scope.organization);
   if (scope.project) search.set("studio_project", scope.project);
   const query = search.toString();
-  return `${logsPath}${path}${query ? `?${query}` : ""}`;
+  return `${logsPath}${path}${query ? `${path.includes("?") ? "&" : "?"}${query}` : ""}`;
 }
 
 async function failureOf(response: Response): Promise<LogsError> {
@@ -80,6 +82,8 @@ export async function logsSend<T = unknown>(method: "POST" | "PUT" | "PATCH" | "
 
 type Loaded<T> = {
   key: string;
+  /** Which load of the list this is, so a page requested before a refresh is not added to the refreshed list. */
+  gen: number;
   items: T[];
   next: string | null;
   error: LogsError | null;
@@ -99,10 +103,10 @@ export function usePagedLogs<T>(path: string, params: Params, enabled = true) {
     const controller = new AbortController();
     const [pa, p, s] = JSON.parse(key) as [string, Params, LogsScope];
     logsGet<Page<T>>(pa, p, s, controller.signal).then(
-      (page) => setState({ key, items: page.items, next: page.next_cursor, error: null, loadingMore: false, updatedAt: Date.now() }),
+      (page) => setState({ key, gen: reloads, items: page.items, next: page.next_cursor, error: null, loadingMore: false, updatedAt: Date.now() }),
       (error: unknown) => {
         if (controller.signal.aborted) return;
-        setState({ key, items: [], next: null, error: error instanceof LogsError ? error : new LogsError(0, String(error)), loadingMore: false, updatedAt: null });
+        setState({ key, gen: reloads, items: [], next: null, error: error instanceof LogsError ? error : new LogsError(0, String(error)), loadingMore: false, updatedAt: null });
       },
     );
     return () => controller.abort();
@@ -115,15 +119,16 @@ export function usePagedLogs<T>(path: string, params: Params, enabled = true) {
     setState({ ...base, loadingMore: true, error: null });
     const [pa, p, s] = JSON.parse(key) as [string, Params, LogsScope];
     logsGet<Page<T>>(pa, { ...p, cursor: base.next }, s).then(
-      (page) => setState((now) => now && now.key === key
+      (page) => setState((now) => now && now.key === key && now.gen === base.gen
         ? { ...now, items: [...now.items, ...page.items], next: page.next_cursor, loadingMore: false, updatedAt: Date.now() }
         : now),
-      (error: unknown) => setState((now) => now && now.key === key
+      (error: unknown) => setState((now) => now && now.key === key && now.gen === base.gen
         ? { ...now, loadingMore: false, error: error instanceof LogsError ? error : new LogsError(0, String(error)) }
         : now),
     );
   }, [state, key]);
 
+  const reload = useCallback(() => setReloads((n) => n + 1), []);
   return useMemo(() => ({
     items: current?.items ?? ([] as T[]),
     loading: enabled && (!ready || current === null),
@@ -132,8 +137,8 @@ export function usePagedLogs<T>(path: string, params: Params, enabled = true) {
     error: current?.error ?? null,
     updatedAt: current?.updatedAt ?? null,
     loadMore,
-    reload: () => setReloads((n) => n + 1),
-  }), [current, enabled, ready, loadMore]);
+    reload,
+  }), [current, enabled, ready, loadMore, reload]);
 }
 
 /** One resource, read again when its path, parameters or the header scope change. */
@@ -149,11 +154,13 @@ export function useLogsResource<T>(path: string | null, params: Params = {}) {
     logsGet<T>(pa, p, s, controller.signal).then(
       (data) => setState({ key, data, error: null }),
       (error: unknown) => {
-        if (!controller.signal.aborted) setState({ key, data: null, error: error instanceof LogsError ? error : new LogsError(0, String(error)) });
+        // A failed refresh keeps what was already shown for this resource.
+        if (!controller.signal.aborted) setState((now) => ({ key, data: now?.key === key ? now.data : null, error: error instanceof LogsError ? error : new LogsError(0, String(error)) }));
       },
     );
     return () => controller.abort();
   }, [key, ready, path, reloads]);
   const current = state?.key === key ? state : null;
-  return { data: current?.data ?? null, error: current?.error ?? null, loading: path !== null && current === null, reload: () => setReloads((n) => n + 1) };
+  const reload = useCallback(() => setReloads((n) => n + 1), []);
+  return { data: current?.data ?? null, error: current?.error ?? null, loading: path !== null && current === null, reload };
 }

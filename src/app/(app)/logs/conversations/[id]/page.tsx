@@ -5,7 +5,7 @@ export default async function ConversationPage({ params }: PageProps<"/logs/conv
   const { id } = await params;
   return (
     <Suspense>
-      <ConversationView id={decodeURIComponent(id)} />
+      <ConversationView key={id} id={decodeURIComponent(id)} />
     </Suspense>
   );
 }

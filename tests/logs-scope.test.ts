@@ -68,6 +68,16 @@ describe("forwardablePath", () => {
     expect(forwardablePath(["v1", "conversations", "conv_1", "turns"])).toBe("v1/conversations/conv_1/turns");
   });
 
+  it("encodes each segment again so a dot segment cannot be smuggled in", () => {
+    const sent = forwardablePath(["v1", "%2e%2e", "auth", "login"]);
+    expect(sent).toBe("v1/%252e%252e/auth/login");
+    expect(new URL(`http://logs.test/api/${sent}`).pathname).toBe("/api/v1/%252e%252e/auth/login");
+    expect(forwardablePath(["v1", "auth?x"])).toBe("v1/auth%3Fx");
+    expect(forwardablePath(["v1", "analytics?"])).toBe("v1/analytics%3F");
+    expect(forwardablePath(["v1", "conversations", "對話 1", "turns"])).toBe("v1/conversations/%E5%B0%8D%E8%A9%B1%201/turns");
+    expect(forwardablePath(["v1", "a" + String.fromCharCode(0) + "b"])).toBeNull();
+  });
+
   it("refuses sign-in, health, traversal and unversioned paths", () => {
     for (const segments of [[], ["v1", "auth", "login"], ["v1", "auth"], ["v1", "health"], ["v1", "..", "x"], ["v1", "a/b"],
       ["v1", ""], ["docs"], ["openapi.json"], ["v1", "a" + String.fromCharCode(92) + "b"]]) {

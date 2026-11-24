@@ -97,7 +97,7 @@ export function ConversationView({ id }: { id: string }) {
           {head.agent && <span>{head.agent}</span>}
           {agentWhere(head) && <span>{agentWhere(head)}</span>}
           <span>{t("共 {0} 則", [total])}</span>
-          <a onClick={() => { setStart({}); setReloads((n) => n + 1); }}>{t("第一則")}</a>
+          <a onClick={() => setStart({ seq: 1 })}>{t("第一則")}</a>
           <a onClick={() => setStart({ latest: true })}>{t("最新")}</a>
           <span>
             {t("跳到第")}{" "}

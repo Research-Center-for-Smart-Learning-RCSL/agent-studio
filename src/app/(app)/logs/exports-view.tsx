@@ -4,7 +4,7 @@ import { App, Button, Empty, Input, Modal, Spin, Table, Tag } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { byteSize, wallClock } from "@/lib/logs-format";
 import type { ExportJob } from "@/lib/logs-types";
-import { LogsError, logsGet, logsSend, useLogsResource, useLogsScope } from "./logs-client";
+import { LogsError, logsSend, useLogsResource, useLogsScope } from "./logs-client";
 import { ErrorNote } from "./logs-ui";
 import styles from "./logs.module.css";
 
@@ -21,11 +21,9 @@ export function ExportsView() {
   // A queued or running export is checked again every few seconds until it finishes.
   useEffect(() => {
     if (!pending) return;
-    const timer = setInterval(() => {
-      logsGet<ExportJob[]>("/v1/exports", {}, scope).then(() => reload(), () => undefined);
-    }, 4000);
+    const timer = setInterval(reload, 4000);
     return () => clearInterval(timer);
-  }, [pending, scope, reload]);
+  }, [pending, reload]);
 
   const rename = async () => {
     if (!renaming) return;

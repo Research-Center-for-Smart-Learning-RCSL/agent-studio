@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/authz";
 import { env } from "@/lib/env";
 import { LogsScopeTooLarge, logsConfigured, logsHeaders } from "@/lib/logs";
-import { forwardablePath } from "@/lib/logs-scope";
+import { forwardablePath, needsAdmin } from "@/lib/logs-scope";
 
 type LogsRoute = RouteContext<"/api/logs/[...path]">;
 
@@ -34,6 +34,8 @@ async function forward(request: Request, context: LogsRoute) {
   if (request.method !== "GET" && !sameOrigin(request)) return failure("來源不符", 403);
   const path = forwardablePath((await context.params).path);
   if (!path) return failure("找不到", 404);
+  // Views that add up every project are the administrators' alone, whatever Logs would answer a scoped caller.
+  if (!user.isAdmin && needsAdmin(path)) return failure("沒有權限", 403);
 
   const incoming = new URL(request.url);
   const filter = {
@@ -49,6 +51,8 @@ async function forward(request: Request, context: LogsRoute) {
     if (error instanceof LogsScopeTooLarge) return failure("可讀取的專案過多，請縮小專案篩選", 413);
     throw error;
   }
+  // The body is passed on as received, so it must not arrive compressed with a length that no longer fits.
+  headers.set("accept-encoding", "identity");
   for (const name of forwardedRequestHeaders) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
@@ -72,7 +76,8 @@ async function forward(request: Request, context: LogsRoute) {
     return failure("無法連線到 Logs", 502);
   }
 
-  const out = new Headers({ "cache-control": "private, no-store" });
+  // What Logs serves can include files users supplied; they must never run as pages of this site.
+  const out = new Headers({ "cache-control": "private, no-store", "x-content-type-options": "nosniff", "content-security-policy": "sandbox" });
   for (const name of forwardedResponseHeaders) {
     const value = upstream.headers.get(name);
     if (value) out.set(name, value);

@@ -48,11 +48,16 @@ export function encodeScope(pairs: [string, string][]): string {
 /** Headers beyond this size risk being refused by the proxy in front of Logs. */
 export const maxScopeHeaderLength = 6000;
 
-/** Whether a client-supplied path may be forwarded to Logs: only its versioned API, never sign-in, health or traversal. */
+/**
+ * The upstream path for a client-supplied one, or null when it may not be
+ * forwarded: only the versioned API, never sign-in or health. The segments
+ * arrive decoded, so each is encoded again on the way out; a segment such as
+ * "%2e%2e" then reaches Logs as literal text instead of a dot segment.
+ */
 export function forwardablePath(segments: string[]): string | null {
-  if (segments.length === 0 || segments.some((s) => s === "" || s === "." || s === ".." || s.includes("/") || s.includes(String.fromCharCode(92)))) return null;
-  const path = segments.join("/");
-  if (!path.startsWith("v1/")) return null;
-  if (path === "v1/health" || path === "v1/auth" || path.startsWith("v1/auth/")) return null;
-  return path;
+  const unsafe = (s: string) => s === "" || s === "." || s === ".." || [...s].some((c) => c === "/" || c === String.fromCharCode(92) || c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127);
+  if (segments.length === 0 || segments.some(unsafe)) return null;
+  if (segments[0] !== "v1" || segments.length < 2) return null;
+  if (segments[1] === "health" || segments[1] === "auth") return null;
+  return segments.map(encodeURIComponent).join("/");
 }

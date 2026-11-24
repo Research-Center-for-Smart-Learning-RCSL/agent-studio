@@ -93,7 +93,7 @@ export function FeedbackView({ isAdmin }: { isAdmin: boolean }) {
           </Form.Item>
         </Form>
       </Modal>
-      <Thread report={open} base={base} isAdmin={isAdmin} onClose={() => setOpen(null)} onChanged={() => { setOpen(null); list.reload(); }} />
+      <Thread key={open?.id ?? "none"} report={open} base={base} isAdmin={isAdmin} onClose={() => setOpen(null)} onChanged={() => { setOpen(null); list.reload(); }} />
     </div>
   );
 }
