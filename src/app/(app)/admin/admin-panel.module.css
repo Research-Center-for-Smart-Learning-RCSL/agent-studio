@@ -1,0 +1,81 @@
+:global(.studio-main):has(> .page) {
+  padding-block-start: clamp(12px, 2vw, 22px);
+}
+
+.title {
+  margin: 0;
+  margin-inline-end: clamp(12px, 2vw, 24px);
+  font-size: clamp(19px, 2.2vw, 26px);
+  line-height: 1.2;
+}
+
+.page :global(.ant-tabs-nav) {
+  margin-block-end: 10px;
+}
+
+.stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+
+.page .card > :global(.ant-card-head) {
+  min-height: 30px;
+  padding-inline: 12px;
+}
+
+.page .card > :global(.ant-card-body) {
+  padding: 8px 12px;
+}
+
+.page .form:global(.ant-form-inline) {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: flex-start;
+  gap: 6px 10px;
+}
+
+.page .form:global(.ant-form-inline) :global(.ant-form-item) {
+  min-width: 0;
+  width: auto;
+  margin: 0;
+}
+
+.page .form :global(.ant-form-item).field { flex: 1 1 11rem; }
+.page .form :global(.ant-form-item).scope { flex: 2 1 13rem; }
+
+.formHint:global(.ant-typography) {
+  margin-block: 0 8px;
+}
+
+.page :global(.ant-table-thead) > tr > th,
+.page :global(.ant-table-tbody) > tr > td {
+  padding-block: 6px;
+}
+
+.page :global(.ant-table-pagination) {
+  margin-block: 10px 0;
+}
+
+.sync {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.sync p { margin: 0; }
+
+@media (max-width: 640px) {
+  .page .form :global(.ant-form-item).field,
+  .page .form :global(.ant-form-item).scope {
+    flex-basis: 100%;
+  }
+
+  .page .form :global(.ant-input),
+  .page .form :global(.ant-input-affix-wrapper),
+  .page .form :global(.ant-select) {
+    min-height: 32px;
+  }
+}

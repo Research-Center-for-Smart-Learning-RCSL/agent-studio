@@ -30,7 +30,7 @@ async function projectAccess(context: FileRoute) {
 export async function POST(request: Request, context: FileRoute) {
   const origin = new URL(process.env.AUTH_URL ?? request.url).origin;
   if (request.headers.get("origin") !== origin) {
-    return failure("只能從 Agent Studio 上傳檔案", 403);
+    return failure("只能從 RCSL Agent Studio 上傳檔案", 403);
   }
 
   const access = await projectAccess(context);

@@ -1,5 +1,5 @@
 {
-  "name": "agent-studio",
+  "name": "rcsl-agent-studio",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -22,6 +22,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
+    "three": "0.187.0",
     "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },
@@ -30,6 +31,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "0.187.0",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",

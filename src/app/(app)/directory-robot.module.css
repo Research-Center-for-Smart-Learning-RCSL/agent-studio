@@ -1,0 +1,314 @@
+.mascot {
+  position: relative;
+  flex: none;
+  z-index: 1;
+}
+
+.button {
+  display: block;
+  appearance: none;
+  border: 0;
+  border-radius: 12px;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: 2px solid #e3f3f5;
+  outline-offset: 3px;
+}
+
+.stage {
+  position: relative;
+  display: block;
+  width: clamp(6.2em, 15vw, 8.6em);
+  height: 5.25em;
+  font-size: clamp(13px, 2.3vw, 17px);
+}
+
+.stage span { box-sizing: border-box; }
+
+.model {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.model canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.flatArt {
+  --hop-distance: clamp(.34em, 2vw, 1.2em);
+  position: absolute;
+  inset: auto 0 0;
+  width: 5.25em;
+  height: 4.9em;
+  margin-inline: auto;
+}
+
+.robot,
+.shadow,
+.head,
+.body,
+.antenna,
+.armLeft,
+.armRight,
+.smile,
+.heart {
+  position: absolute;
+}
+
+.robot {
+  inset: 0;
+  transform-origin: 50% 91%;
+}
+
+.shadow {
+  inset: auto 1.17em .1em;
+  height: .48em;
+  border-radius: 50%;
+  background: #192d3e55;
+}
+
+.body {
+  inset: auto 1.46em .4em;
+  display: grid;
+  place-items: center;
+  height: 1.78em;
+  border: .13em solid #5c798e;
+  border-radius: 39% 39% 22% 22% / 35% 35% 19% 19%;
+  background: linear-gradient(#e5eef3, #b0c5d2);
+  box-shadow: inset 0 -.13em #8faabd;
+}
+
+.body > span {
+  width: .33em;
+  height: .33em;
+  margin-block-end: .14em;
+  border-radius: 50%;
+  background: #548678;
+}
+
+.armLeft, .armRight {
+  bottom: .82em;
+  width: .49em;
+  height: 1.15em;
+  border-radius: .45em;
+  background: #8aaabd;
+  transform-origin: 50% .17em;
+}
+
+.armLeft { left: 1.49em; rotate: 31deg; }
+.armRight { right: 1.49em; rotate: -31deg; }
+
+.armLeft::after, .armRight::after {
+  box-sizing: border-box;
+  width: .85em;
+  height: .85em;
+  border: .1em solid #5c798e;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #f4f9fc, #b9cfdb 66%, #92aec1);
+}
+
+.armLeft::after, .armRight::after {
+  position: absolute;
+  bottom: -.1em;
+  left: 50%;
+  translate: -50% 0;
+  content: "";
+}
+
+.head {
+  inset: 1.07em 1.08em auto;
+  height: 2.25em;
+  padding: .21em .2em;
+  border: .12em solid #65849a;
+  border-radius: 14% / 50%;
+  background: linear-gradient(135deg, #f4f8fb 10%, #a9c1d1 88%);
+  box-shadow: inset 0 .1em #fff9, 0 .16em .28em #192d3e35;
+}
+
+.antenna {
+  bottom: 100%;
+  left: calc(50% - .07em);
+  width: .14em;
+  height: .46em;
+  background: #9eb9cb;
+  transform-origin: bottom;
+}
+
+.antenna::before {
+  position: absolute;
+  inset: -.28em auto auto -.17em;
+  width: .48em;
+  height: .48em;
+  border-radius: 50%;
+  background: #b5d9cb;
+  box-shadow: 0 0 .45em #b5d9cb60;
+  content: "";
+}
+
+.face {
+  position: relative;
+  display: block;
+  height: 100%;
+  border-radius: 14% / 50%;
+  background:
+    radial-gradient(ellipse .15em .1em at 22% 67%, #daaab1 98%, transparent),
+    radial-gradient(ellipse .15em .1em at 78% 67%, #daaab1 98%, transparent),
+    linear-gradient(145deg, #2a4a5e, #1e3649);
+  box-shadow: inset 0 .1em .2em #0e233c66;
+}
+
+.eyes {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  gap: .49em;
+  inset: .3em 0 auto;
+}
+
+.eyes > span {
+  width: .28em;
+  height: .42em;
+  border-radius: 50%;
+  background: #dcf5ef;
+}
+
+.smile {
+  left: calc(50% - .18em);
+  bottom: .33em;
+  width: .36em;
+  height: .18em;
+  border-bottom: .11em solid #dcf5ef;
+  border-radius: 0 0 .36em .36em;
+}
+
+.heart {
+  top: .05em;
+  right: .05em;
+  color: #f3bec8;
+  font-size: 1.12em;
+  line-height: 1;
+  opacity: 0;
+  text-shadow: 0 .08em .2em #1b2f3e77;
+}
+
+.bubble {
+  position: absolute;
+  inset: auto 0 calc(100% - 14px) auto;
+  width: max-content;
+  max-width: min(12rem, calc(100vw - 92px));
+  padding: 5px 9px;
+  border: 1px solid #d6e5eb;
+  border-radius: 9px;
+  background: #f1f7fa;
+  color: #30485b;
+  font-size: 12px;
+  line-height: 1.3;
+  pointer-events: none;
+  box-shadow: 0 3px 10px #1b2f3e35;
+}
+
+.bubble:empty { clip-path: inset(50%); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .head {
+    transform: perspective(6em) rotateY(var(--head-angle, 0deg));
+    transition: transform .3s ease;
+  }
+
+  .mascot[data-pose="idle"] .head { animation: lookAround 14s ease-in-out infinite; }
+
+  .mascot[data-pose="idle"] .button:focus-visible .head {
+    --head-angle: 34deg;
+    animation: none;
+  }
+
+  @media (hover: hover) {
+    .mascot[data-pose="idle"] .button:hover .head {
+      --head-angle: 34deg;
+      animation: none;
+    }
+  }
+
+  .mascot[data-pose="wave"] .head { --head-angle: 36deg; }
+  .mascot[data-pose="happy"] .head { --head-angle: -27deg; }
+  .mascot[data-pose="heart"] .head { --head-angle: 24deg; }
+}
+
+.mascot[data-pose="idle"] .flatArt { animation: hopPath 15s ease-in-out infinite; }
+.mascot[data-pose="idle"] .robot { animation: hopPose 15s ease-in-out infinite; }
+.mascot[data-pose="idle"] .eyes > span { animation: blink 14s ease-in-out infinite; }
+.mascot[data-pose="idle"] .antenna { animation: antennaWiggle 14s ease-in-out infinite; }
+.mascot[data-pose="wave"] .armRight { animation: wave 1s ease-in-out 2; }
+.mascot[data-pose="happy"] .robot { animation: bounce .8s ease-in-out 2; }
+.mascot[data-pose="heart"] .heart { opacity: 1; animation: floatHeart 1.4s ease-out both; }
+
+.mascot[data-pose="happy"] .eyes > span,
+.mascot[data-pose="heart"] .eyes > span {
+  height: .27em;
+  margin-block-start: .1em;
+  border: .095em solid #dcf5ef;
+  border-bottom: 0;
+  border-radius: .4em .4em 0 0;
+  background: transparent;
+}
+
+@keyframes hopPath {
+  0%, 21%, 49%, 59%, 85%, 100% { translate: 0; }
+  30%, 40% { translate: var(--hop-distance); }
+  68%, 76% { translate: calc(-1 * var(--hop-distance)); }
+}
+
+@keyframes hopPose {
+  0%, 18%, 33%, 37%, 52%, 56%, 71%, 73%, 88%, 100% { translate: 0; scale: 1; }
+  21%, 40%, 59%, 76% { translate: 0; scale: 1.08 .84; }
+  25.5%, 44.5%, 63.5%, 80.5% { translate: 0 -.68em; scale: 1; }
+  30%, 49%, 68%, 85% { translate: 0; scale: 1.05 .92; }
+}
+
+@keyframes lookAround {
+  0%, 17%, 35%, 51%, 69%, 100% { transform: perspective(6em) rotateY(0deg); }
+  22%, 29% { transform: perspective(6em) rotateY(-38deg); }
+  56%, 63% { transform: perspective(6em) rotateY(38deg); }
+}
+
+@keyframes blink {
+  0%, 9%, 12%, 48%, 51%, 92%, 95%, 100% { scale: 1; }
+  10.5%, 49.5%, 93.5% { scale: 1 .13; }
+}
+
+@keyframes antennaWiggle {
+  0%, 50%, 62%, 100% { rotate: 0deg; }
+  54% { rotate: 19deg; }
+  58% { rotate: -13deg; }
+}
+
+@keyframes wave {
+  0%, 100% { rotate: -31deg; }
+  25%, 65% { rotate: -150deg; }
+  45%, 80% { rotate: -113deg; }
+}
+
+@keyframes bounce {
+  0%, 100% { translate: 0; }
+  44% { translate: 0 -.55em; }
+}
+
+@keyframes floatHeart {
+  from { opacity: 0; transform: translate(-.3em, .65em) scale(.55); }
+  55%, to { opacity: 1; }
+  to { transform: translate(.08em, -.15em); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot[data-pose] :is(.flatArt, .robot, .eyes > span, .antenna, .armRight, .heart) {
+    animation: none;
+  }
+}

@@ -184,12 +184,27 @@ export async function removeMembershipAction(id: number) {
   });
 }
 
+export async function deleteUserAction(email: string) {
+  return run(async () => {
+    const admin = await requireAdmin();
+    const target = z.string().trim().toLowerCase().email().parse(email);
+    if (target === admin.email) throw new Error("不能刪除自己的帳號");
+    await db.transaction(async (tx) => {
+      const [removed] = await tx.delete(users).where(eq(users.email, target)).returning();
+      if (!removed) throw new Error("帳號不存在");
+      await tx.insert(auditEvents).values({ actor: admin.email, action: "user.delete", targetType: "user", targetId: target });
+    });
+    revalidatePath("/admin");
+  });
+}
+
 export async function setAdminAction(email: string, isAdmin: boolean) {
   return run(async () => {
     const admin = await requireAdmin();
-    if (email === admin.email && !isAdmin) throw new Error("不能移除自己的管理員身分");
-    await db.update(users).set({ isAdmin }).where(eq(users.email, email));
-    await db.insert(auditEvents).values({ actor: admin.email, action: isAdmin ? "admin.grant" : "admin.revoke", targetType: "user", targetId: email });
+    const target = z.string().trim().toLowerCase().email().parse(email);
+    if (target === admin.email && !isAdmin) throw new Error("不能移除自己的管理員身分");
+    await db.update(users).set({ isAdmin }).where(eq(users.email, target));
+    await db.insert(auditEvents).values({ actor: admin.email, action: isAdmin ? "admin.grant" : "admin.revoke", targetType: "user", targetId: target });
     revalidatePath("/admin");
   });
 }

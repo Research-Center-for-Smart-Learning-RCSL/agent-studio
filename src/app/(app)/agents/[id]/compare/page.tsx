@@ -1,3 +1,4 @@
+import { getTranslator } from "@/lib/i18n-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { diffLines } from "diff";
@@ -12,13 +13,14 @@ function instructionsText(messages: { role: string; content: unknown }[]) {
     .join("\n\n");
 }
 
-function Diff(props: { title: string; a: string; b: string }) {
+function Diff(props: { title: string; a: string; b: string ; t: Awaited<ReturnType<typeof getTranslator>>}) {
+  const t = props.t;
   const parts = diffLines(props.a, props.b);
   const changed = parts.some((p) => p.added || p.removed);
   return (
     <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, marginBottom: 16 }}>
       <h3 style={{ margin: 0, padding: "10px 12px", borderBottom: "1px solid #e5e7eb", fontSize: 15 }}>
-        {props.title} {!changed && <span style={{ color: "#888", fontWeight: 400 }}>（相同）</span>}
+        {props.title} {!changed && <span style={{ color: "#526473", fontWeight: 400 }}>{t("（相同）")}</span>}
       </h3>
       {changed && (
         <div style={{ padding: "6px 0", maxHeight: "70vh", overflow: "auto" }}>
@@ -27,7 +29,7 @@ function Diff(props: { title: string; a: string; b: string }) {
             // Collapse long unchanged stretches to their edges.
             const shown =
               !p.added && !p.removed && lines.length > 8
-                ? [...lines.slice(0, 3), `… 省略 ${lines.length - 6} 行未變更 …`, ...lines.slice(-3)]
+                ? [...lines.slice(0, 3), t("… 省略 {0} 行未變更 …", [lines.length - 6]), ...lines.slice(-3)]
                 : lines;
             const cls = p.added ? "diff-add" : p.removed ? "diff-del" : "diff-ctx";
             const mark = p.added ? "+ " : p.removed ? "- " : "  ";
@@ -45,6 +47,7 @@ function Diff(props: { title: string; a: string; b: string }) {
 }
 
 export default async function ComparePage(props: PageProps<"/agents/[id]/compare">) {
+  const t = await getTranslator();
   const user = await requireUser();
   const { id } = await props.params;
   const q = await props.searchParams;
@@ -61,13 +64,13 @@ export default async function ComparePage(props: PageProps<"/agents/[id]/compare
       </p>
       <CompareControls agentId={id} versions={versions.map((v) => v.version)} a={a?.version ?? null} b={b?.version ?? null} />
       {!a || !b ? (
-        <p>請選擇兩個版本。</p>
+        <p>{t("請選擇兩個版本。")}</p>
       ) : (
         <>
-          <Diff title="模型" a={a.model + "\n"} b={b.model + "\n"} />
-          <Diff title="Instructions" a={instructionsText(a.instructions)} b={instructionsText(b.instructions)} />
-          <Diff title="工具" a={JSON.stringify(a.tools, null, 2)} b={JSON.stringify(b.tools, null, 2)} />
-          <Diff title="參數" a={JSON.stringify(a.settings, null, 2)} b={JSON.stringify(b.settings, null, 2)} />
+          <Diff t={t} title={t("模型")} a={a.model + "\n"} b={b.model + "\n"} />
+          <Diff t={t} title="Instructions" a={instructionsText(a.instructions)} b={instructionsText(b.instructions)} />
+          <Diff t={t} title={t("工具")} a={JSON.stringify(a.tools, null, 2)} b={JSON.stringify(b.tools, null, 2)} />
+          <Diff t={t} title={t("參數")} a={JSON.stringify(a.settings, null, 2)} b={JSON.stringify(b.settings, null, 2)} />
         </>
       )}
     </div>
