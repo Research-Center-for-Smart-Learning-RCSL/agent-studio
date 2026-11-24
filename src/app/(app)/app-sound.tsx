@@ -77,18 +77,6 @@ export function AppSound() {
     return () => { for (const name of events) window.removeEventListener(name, retry); };
   }, [settings.music]);
 
-  // A background tab stays quiet.
-  useEffect(() => {
-    const onVisibility = () => {
-      const element = audio.current;
-      if (!element) return;
-      if (document.hidden) element.pause();
-      else if (getMusicOn() && element.src) void element.play().catch(() => undefined);
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, []);
-
   useEffect(() => installSoundEffects(), []);
 
   const label = t("聲音設定");
