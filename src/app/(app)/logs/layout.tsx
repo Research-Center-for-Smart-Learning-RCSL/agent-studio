@@ -18,7 +18,7 @@ export default async function LogsLayout({ children }: LayoutProps<"/logs">) {
   }
   return (
     <LogsProvider userEmail={user.email}>
-      <div className={styles.page}>
+      <div className={`${styles.page} studio-logs`}>
         <LogsNav isAdmin={user.isAdmin} />
         {children}
       </div>

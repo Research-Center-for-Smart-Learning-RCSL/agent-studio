@@ -63,10 +63,22 @@ export function AppSidebar({ items }: { items: { key: SidebarKey; label: string 
       </button>
       {open && <div className="studio-sidebar-backdrop" onClick={() => setOpen(false)} aria-hidden="true" />}
       <aside id="studio-sidebar" className={`studio-sidebar${collapsed ? " is-collapsed" : ""}${open ? " is-open" : ""}`}>
-        <Link href="/" className="studio-brand" title="RCSL Agent Studio">
-          <span className="studio-mark" aria-hidden="true" />
-          <span className="studio-brand-name">RCSL Agent Studio</span>
-        </Link>
+        <div className="studio-sidebar-top">
+          <Link href="/" className="studio-brand" title="RCSL Agent Studio">
+            <span className="studio-mark" aria-hidden="true" />
+            <span className="studio-brand-name">RCSL Agent Studio</span>
+          </Link>
+          <button
+            type="button"
+            className="studio-collapse studio-collapse-top"
+            aria-label={collapsed ? t("展開側欄") : t("收合側欄")}
+            aria-pressed={collapsed}
+            title={collapsed ? t("展開側欄") : t("收合側欄")}
+            onClick={toggleCollapsed}
+          >
+            <span className="studio-nav-icon" aria-hidden="true">{collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}</span>
+          </button>
+        </div>
         <nav className="studio-nav" aria-label={t("主導覽")}>
           {items.map((item) => (
             <Link

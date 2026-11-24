@@ -136,6 +136,10 @@ a {
   padding-block-start: clamp(12px, 2vw, 22px);
 }
 
+.studio-main:has(.studio-logs) {
+  padding-block-start: clamp(12px, 1.5vw, 20px);
+}
+
 .studio-panel {
   background: #fff;
   border: 1px solid var(--studio-border);
@@ -746,8 +750,10 @@ a {
   transition: width 0.18s ease;
 }
 .studio-sidebar.is-collapsed { width: 68px; }
+.studio-sidebar-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; gap: 4px; }
 .studio-sidebar .studio-brand { padding-inline: 4px; min-height: 40px; }
 .studio-brand-name { overflow: hidden; text-overflow: ellipsis; }
+.studio-collapse-top { width: 36px; min-height: 36px; padding: 0; justify-content: center; }
 
 .studio-nav { display: flex; flex-direction: column; gap: 4px; }
 .studio-nav a,
