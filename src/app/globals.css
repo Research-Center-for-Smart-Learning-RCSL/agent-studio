@@ -751,10 +751,16 @@ a {
 }
 .studio-sidebar.is-collapsed { width: 68px; }
 .studio-sidebar-top { display: flex; align-items: center; min-height: 40px; gap: 4px; min-width: 0; }
-.studio-sidebar-top .studio-brand { flex: 1 1 auto; min-width: 0; gap: 6px; overflow: hidden; font-size: 15px; }
-.studio-sidebar .studio-brand { padding-inline: 4px; min-height: 40px; }
+.studio-sidebar-top .studio-brand { flex: 1 1 auto; min-width: 0; gap: 8px; overflow: hidden; font-size: 14px; }
+.studio-sidebar .studio-brand { padding-inline: 2px; min-height: 40px; }
 .studio-brand-name { overflow: hidden; text-overflow: ellipsis; }
-.studio-collapse-top { flex: none; width: 28px; min-width: 28px; min-height: 28px; height: 28px; padding: 0; justify-content: center; }
+/* Outranks .studio-collapse, declared further down, whose width: 100% and margin-top: auto would stretch and sink this button. */
+.studio-sidebar .studio-collapse-top { flex: none; width: 28px; min-width: 28px; min-height: 28px; height: 28px; margin: 0; padding: 0; justify-content: center; }
+@media (min-width: 861px) {
+  .studio-sidebar.is-collapsed .studio-sidebar-top { flex-direction: column; gap: 2px; }
+  .studio-sidebar.is-collapsed .studio-sidebar-top .studio-brand { flex: none; }
+  .studio-sidebar.is-collapsed .studio-collapse-top { align-self: center; }
+}
 
 .studio-nav { display: flex; flex-direction: column; gap: 4px; }
 .studio-nav a,
