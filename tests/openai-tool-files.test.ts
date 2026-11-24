@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { searchIndexStatus, uploadToolFiles } from "../src/lib/openai-tool-files";
+import { ProviderError, searchIndexStatus, uploadToolFiles } from "../src/lib/openai-tool-files";
 
 vi.mock("server-only", () => ({}));
 
@@ -41,10 +41,55 @@ describe("OpenAI tool uploads", () => {
 
   it("treats a provider project mismatch and partial index failure as unusable", async () => {
     const upstream = vi.fn()
+      // A failed index is deleted along with its files, so the cleanup calls follow the status call.
       .mockResolvedValueOnce(response({ status: "completed", file_counts: { failed: 1, completed: 1 } }))
+      .mockResolvedValueOnce(response({ data: [] }))
+      .mockResolvedValueOnce(response({ deleted: true }))
       .mockResolvedValueOnce(response({ status: "completed" }, "proj_other"));
     vi.stubGlobal("fetch", upstream);
     await expect(searchIndexStatus(access, "vs_new")).resolves.toBe("failed");
     await expect(searchIndexStatus(access, "vs_new")).rejects.toThrow("project file request");
+  });
+
+  it("deletes a store that failed indexing together with its files", async () => {
+    const upstream = vi.fn()
+      .mockResolvedValueOnce(response({ status: "completed", file_counts: { failed: 1, completed: 0 } }))
+      .mockResolvedValueOnce(response({ data: [{ id: "file-one" }, { id: "not a file id" }] }))
+      .mockResolvedValue(response({ deleted: true }));
+    vi.stubGlobal("fetch", upstream);
+    await expect(searchIndexStatus(access, "vs_bad")).resolves.toBe("failed");
+    const deletes = upstream.mock.calls.filter(([, init]) => init?.method === "DELETE").map(([url]) => url).sort();
+    expect(deletes).toEqual(["https://api.openai.com/v1/files/file-one", "https://api.openai.com/v1/vector_stores/vs_bad"]);
+  });
+
+  it("leaves a store that is still indexing or ready alone", async () => {
+    const upstream = vi.fn()
+      .mockResolvedValueOnce(response({ status: "in_progress" }))
+      .mockResolvedValueOnce(response({ status: "completed", file_counts: { completed: 1 } }));
+    vi.stubGlobal("fetch", upstream);
+    await expect(searchIndexStatus(access, "vs_a")).resolves.toBe("indexing");
+    await expect(searchIndexStatus(access, "vs_b")).resolves.toBe("ready");
+    expect(upstream).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports only the status, code, and type of a rejected call", async () => {
+    const message = "Incorrect API key provided: sk-abc***xyz";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      Response.json({ error: { message, code: "invalid_api_key", type: "invalid_request_error" } }, { status: 401 }),
+    ));
+    const error = await searchIndexStatus(access, "vs_new").catch((issue: unknown) => issue);
+    expect(error).toBeInstanceOf(ProviderError);
+    expect(error).toMatchObject({ status: 401, code: "invalid_api_key", type: "invalid_request_error" });
+    expect(JSON.stringify(error) + String((error as Error).message)).not.toContain("sk-abc");
+  });
+
+  it("cleans up a file that was created in a different project than expected", async () => {
+    const upstream = vi.fn()
+      .mockResolvedValueOnce(response({ id: "file-stray" }, "proj_other"))
+      .mockResolvedValue(response({ deleted: true }));
+    vi.stubGlobal("fetch", upstream);
+    await expect(uploadToolFiles(access, [file("one.txt")], "file")).rejects.toMatchObject({ code: "project_mismatch" });
+    expect(upstream.mock.calls[1][0]).toBe("https://api.openai.com/v1/files/file-stray");
+    expect(upstream.mock.calls[1][1].method).toBe("DELETE");
   });
 });

@@ -38,10 +38,13 @@ function registryKeys() {
       signal: AbortSignal.timeout(8_000),
     });
     if (!response.ok) throw new Error("RCSL credential lookup failed");
-    const payload = await response.json() as { data: { organization: { project: { api_key?: unknown }[] }[] } };
+    const payload = await response.json() as { data?: { organization?: unknown } };
     const matches = new Map<string, string>();
-    for (const org of payload.data.organization) {
-      for (const { api_key: stored } of org.project) {
+    // One malformed organization must not take every project's uploads down.
+    const organizations = Array.isArray(payload?.data?.organization) ? payload.data.organization : [];
+    for (const org of organizations as { project?: unknown }[]) {
+      for (const project of Array.isArray(org?.project) ? org.project as { api_key?: unknown }[] : []) {
+        const stored = project?.api_key;
         if (typeof stored !== "string" || !stored.startsWith("sk-") || stored.length <= 8) continue;
         const key = stored.slice(0, -6) + stored.slice(-5);
         matches.set(createHash("sha256").update(key).digest("hex"), key);
@@ -54,6 +57,19 @@ function registryKeys() {
   });
   cachedRegistry = { expires: Date.now() + 60_000, keys };
   return keys;
+}
+
+/**
+ * Whether uploads can work for the project right now: configured, and the key
+ * still resolves. The editor uses this so it never offers a control that fails.
+ */
+export async function toolFileAvailable(projectId: string): Promise<boolean> {
+  if (!canResolveToolFileKey(projectId)) return false;
+  try {
+    return !!(await toolFileKey(projectId));
+  } catch {
+    return false;
+  }
 }
 
 /** Registry credentials are matched only against fingerprints verified for this project by OpenAI. */

@@ -52,6 +52,7 @@ export async function getAgent(id: string) {
     .select({
       agent: agents,
       projectName: projects.name,
+      projectActive: projects.active,
       organizationId: projects.organizationId,
       organizationName: organizations.name,
     })

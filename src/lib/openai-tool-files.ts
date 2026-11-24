@@ -3,19 +3,41 @@ import { toolFileId, toolVectorStoreId, type ToolUploadMode } from "./tool-attac
 
 export type ToolFileAccess = { projectId: string; key: string };
 
-async function provider(access: ToolFileAccess, path: string, init?: RequestInit) {
+/** A rejected provider call. Only the status and OpenAI's error code and type are kept: never the key or message. */
+export class ProviderError extends Error {
+  constructor(readonly status: number, readonly code?: string, readonly type?: string) {
+    super("OpenAI rejected the project file request");
+  }
+}
+
+async function send(access: ToolFileAccess, path: string, init?: RequestInit) {
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${access.key}`);
   headers.set("OpenAI-Project", access.projectId);
-  const response = await fetch(`https://api.openai.com/v1/${path}`, {
+  return fetch(`https://api.openai.com/v1/${path}`, {
     ...init,
     headers,
     cache: "no-store",
     signal: init?.signal ?? AbortSignal.timeout(12_000),
   });
-  if (!response.ok || response.headers.get("openai-project") !== access.projectId) {
+}
+
+async function rejected(response: Response) {
+  const body = await response.json().catch(() => null) as { error?: { code?: unknown; type?: unknown } } | null;
+  const text = (value: unknown) => typeof value === "string" ? value : undefined;
+  return new ProviderError(response.status, text(body?.error?.code), text(body?.error?.type));
+}
+
+function inProject(access: ToolFileAccess, response: Response) {
+  return response.headers.get("openai-project") === access.projectId;
+}
+
+async function provider(access: ToolFileAccess, path: string, init?: RequestInit) {
+  const response = await send(access, path, init);
+  if (!response.ok) throw await rejected(response);
+  if (!inProject(access, response)) {
     await response.body?.cancel();
-    throw new Error("OpenAI rejected the project file request");
+    throw new ProviderError(response.status, "project_mismatch");
   }
   return response;
 }
@@ -30,9 +52,22 @@ function indexStatus(store: {
   return "failed";
 }
 
+/** Best effort: removes a store and the files it holds. Versions never reference a store that failed. */
+async function discardSearchIndex(access: ToolFileAccess, id: string) {
+  const remove = (path: string) => provider(access, path, { method: "DELETE", signal: AbortSignal.timeout(5_000) });
+  const listed = await provider(access, `vector_stores/${encodeURIComponent(id)}/files?limit=100`, { signal: AbortSignal.timeout(5_000) })
+    .then((response) => response.json() as Promise<{ data?: { id?: unknown }[] }>)
+    .catch(() => ({ data: [] }));
+  const fileIds = (listed.data ?? []).flatMap((file) => typeof file.id === "string" && toolFileId.test(file.id) ? [file.id] : []);
+  await Promise.allSettled([remove(`vector_stores/${encodeURIComponent(id)}`), ...fileIds.map((file) => remove(`files/${file}`))]);
+}
+
+/** A store whose indexing failed is unusable, so reporting that also deletes it rather than leaving it in the project. */
 export async function searchIndexStatus(access: ToolFileAccess, id: string) {
   const response = await provider(access, `vector_stores/${encodeURIComponent(id)}`);
-  return indexStatus(await response.json());
+  const status = indexStatus(await response.json());
+  if (status === "failed") await discardSearchIndex(access, id);
+  return status;
 }
 
 export async function uploadToolFiles(access: ToolFileAccess, files: File[], mode: ToolUploadMode) {
@@ -44,10 +79,13 @@ export async function uploadToolFiles(access: ToolFileAccess, files: File[], mod
       const body = new FormData();
       body.set("file", file);
       body.set("purpose", mode === "search" ? "assistants" : "user_data");
-      const response = await provider(access, "files", { method: "POST", body, signal });
+      const response = await send(access, "files", { method: "POST", body, signal });
+      if (!response.ok) throw await rejected(response);
       const result = await response.json() as { id?: unknown };
       if (typeof result.id !== "string" || !toolFileId.test(result.id)) throw new Error("OpenAI returned an invalid file ID");
+      // Recorded before the project check so a file created anywhere is still cleaned up.
       created.push({ id: result.id, name: file.name });
+      if (!inProject(access, response)) throw new ProviderError(response.status, "project_mismatch");
     }
     if (mode === "file") {
       return { id: created[0].id, attachments: created.map(({ id, name }) => ({ id, names: [name] })), status: "ready" as const };

@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { getAgent, getVersion, listVersions } from "@/lib/agents";
 import { can, requireUser } from "@/lib/authz";
-import { canResolveToolFileKey } from "@/lib/tool-file-credentials";
+import { toolFileAvailable } from "@/lib/tool-file-credentials";
 import { AgentEditor, type ToolTemplate } from "./agent-editor";
 
 export default async function AgentPage(props: PageProps<"/agents/[id]">) {
@@ -61,7 +61,7 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
           : null
       }
       canEdit={canEdit}
-      canUploadToolFiles={canEdit && canResolveToolFileKey(found.agent.projectId)}
+      canUploadToolFiles={canEdit && !found.agent.archivedAt && found.projectActive && (await toolFileAvailable(found.agent.projectId))}
       toolTemplates={templates.rows.map((r) => ({ key: r.key, tool: r.tool })) satisfies ToolTemplate[]}
       modelSuggestions={models.rows.map((r) => r.model)}
     />

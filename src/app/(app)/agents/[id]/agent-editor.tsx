@@ -575,15 +575,24 @@ function ModelSettings(props: {
   );
 }
 
+// A proxy can answer with an HTML error page, so a body that is not JSON is not an error to show.
+async function readJson<T>(response: Response): Promise<Partial<T>> {
+  return response.json().catch(() => ({})) as Promise<Partial<T>>;
+}
+
+// Statuses that retrying cannot fix: waiting out the deadline would only hide them.
+const permanentStatuses = new Set([401, 403, 404, 409, 503]);
+
 async function waitForSearchIndex(endpoint: string, id: string) {
   const query = new URLSearchParams({ store: id });
   const deadline = Date.now() + 45_000;
   while (Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    const status = await fetch(`${endpoint}?${query}`, { signal: AbortSignal.timeout(6000) })
-      .then(async (response) => response.ok ? (await response.json()).status : null)
-      .catch(() => null);
-    if (status === "ready" || status === "failed") return status;
+    const response = await fetch(`${endpoint}?${query}`, { signal: AbortSignal.timeout(6000) }).catch(() => null);
+    if (!response) continue;
+    const result = await readJson<{ status: string; error: string }>(response);
+    if (response.ok && (result.status === "ready" || result.status === "failed")) return result.status;
+    if (permanentStatuses.has(response.status)) throw new Error(result.error || "暫時無法確認檔案索引，請稍後再試");
   }
   return "indexing";
 }
@@ -596,7 +605,7 @@ function ToolsEditor(props: {
   templates: ToolTemplate[];
   onChange: (tools: Record<string, unknown>[]) => void;
 }) {
-  const { t, error: translateUploadError } = useI18n();
+  const { t, rich, error: translateUploadError } = useI18n();
   const [editing, setEditing] = useState<number | "new" | null>(null);
   const [text, setText] = useState("");
   const [uploadStatus, setUploadStatus] = useState<"uploading" | "indexing" | null>(null);
@@ -643,6 +652,10 @@ function ToolsEditor(props: {
       setPendingIndex(undefined);
       if (status === "ready") addUploads([attachment]);
       else message.error(t("檔案無法建立索引，請確認格式後再上傳。"));
+    } catch (issue) {
+      // The index cannot be checked, so keeping the pending state would only offer a check that fails again.
+      setPendingIndex(undefined);
+      message.error(issue instanceof Error ? translateUploadError(issue.message) : t("暫時無法確認檔案索引，請稍後再試"));
     } finally {
       setUploadStatus(null);
     }
@@ -665,12 +678,14 @@ function ToolsEditor(props: {
     for (const file of files) body.append("file", file);
     try {
       const response = await fetch(endpoint, { method: "POST", body });
-      const result = await response.json() as {
-        attachments?: ToolUploadAttachment[];
-        error?: string;
-        status?: "ready" | "indexing";
-      };
-      if (!response.ok || !result.attachments?.length) throw new Error(result.error || t("無法上傳檔案"));
+      const result = await readJson<{
+        attachments: ToolUploadAttachment[];
+        error: string;
+        status: "ready" | "indexing";
+      }>(response);
+      if (!response.ok || !result.attachments?.length) {
+        throw new Error(result.error || (response.status === 413 ? "每次上傳的檔案總大小上限為 10 MB" : "無法上傳檔案"));
+      }
       if (result.status === "indexing") {
         await checkIndex(result.attachments[0]);
       } else {
@@ -805,7 +820,7 @@ function ToolsEditor(props: {
                       event.target.value = "";
                     }}
                   />
-                  {uploading && <span role="status">{uploadStatus === "indexing" ? t(" 正在建立搜尋索引…") : t(" 上傳中…")}</span>}
+                  {uploading && <span role="status">{" "}{uploadStatus === "indexing" ? t("正在建立搜尋索引…") : t("上傳中…")}</span>}
                   {pendingIndex && !uploading && (
                     <Space wrap>
                       <Button type="link" onClick={() => void checkIndex(pendingIndex)}>{t("重新檢查索引")}</Button>
@@ -820,7 +835,7 @@ function ToolsEditor(props: {
           </Form>
         )}
         <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
-          {t("MCP 等需要憑證的欄位請填")}{" "}<code>{"{{secret:name}}"}</code>{" "}{t("，由管理員在「管理 / 憑證」設定實際值，不要直接貼上金鑰。")}</Typography.Paragraph>
+          {rich("MCP 等需要憑證的欄位請填 {0}，由管理員在「管理 / 憑證」設定實際值，不要直接貼上金鑰。", [<code key="secret">{"{{secret:name}}"}</code>])}</Typography.Paragraph>
         <div style={{ border: "1px solid #e5e7eb" }}>
           <Editor
             height="50vh"
