@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Button, Empty, Spin, Table } from "antd";
+import { Empty, Spin, Table } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { agentWhere, wallClock } from "@/lib/logs-format";
 import type { ConversationSummary } from "@/lib/logs-types";
-import { ExportDialog } from "./export-dialog";
+import { ConversationExport } from "./export-control";
 import { usePagedLogs } from "./logs-client";
 import { FilterBar, useUrlFilters } from "./logs-filters";
 import { ErrorNote, Highlight, LoadMore, OpenLink, RuntimeTag, useRowOpen } from "./logs-ui";
@@ -21,7 +21,6 @@ export function ConversationList() {
   const list = usePagedLogs<ConversationSummary>("/v1/conversations", { ...conversationFilters, limit: 50 }, !bad);
   const rowOpen = useRowOpen();
   const [selected, setSelected] = useState<string[]>([]);
-  const [exporting, setExporting] = useState(false);
   const empty = !list.loading && !list.error && list.items.length === 0;
   return (
     <div className={styles.page}>
@@ -29,12 +28,19 @@ export function ConversationList() {
       {list.error && <ErrorNote error={list.error} onRetry={list.reload} />}
       {list.loading && !bad && <Spin />}
       {empty && !bad && <Empty description={t("沒有符合的對話")} />}
+      {selected.length > 0 && (
+        <div className={styles.selectionBar}>
+          <span>{t("已選 {0} 段", [selected.length])}</span>
+          <ConversationExport conversations={selected} titleOf={(id) => list.items.find((c) => c.conversation === id)?.title ?? ""} />
+          <a onClick={() => setSelected([])}>{t("取消選取")}</a>
+          <span className={styles.muted}>{t("匯出的是所選對話的完整內容（每段由舊到新），不只是搜尋命中的回合。")}</span>
+          <span className={styles.muted}>{t("一次最多匯出 {0} 段對話。", [200])}</span>
+        </div>
+      )}
       {list.items.length > 0 && (
         <>
           <div className={styles.status}>
             <span>{t("依最近活動排序")}</span>
-            {selected.length > 0 && <Button size="small" onClick={() => setExporting(true)}>{t("匯出所選（{0}）", [selected.length])}</Button>}
-            {selected.length > 0 && <a onClick={() => setSelected([])}>{t("取消選取")}</a>}
             <a onClick={list.reload}>{t("重新整理")}</a>
           </div>
           <Table<ConversationSummary>
@@ -89,7 +95,6 @@ export function ConversationList() {
           <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onMore={list.loadMore} count={list.items.length} unit={t("個對話")} />
         </>
       )}
-      <ExportDialog open={exporting} onClose={() => setExporting(false)} conversations={selected} />
     </div>
   );
 }

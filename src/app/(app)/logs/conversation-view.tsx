@@ -9,6 +9,8 @@ import { agentWhere } from "@/lib/logs-format";
 import type { ConversationTurnPage, Turn } from "@/lib/logs-types";
 import { LogsError, logsGet, logsSend, useLogsScope, type Params } from "./logs-client";
 import { ConversationNotes, ConversationTitle } from "./curation";
+import { ActionDock } from "./action-dock";
+import { ConversationExportPanel } from "./export-control";
 import { ErrorNote } from "./logs-ui";
 import styles from "./logs.module.css";
 import { TurnCard } from "./turn-card";
@@ -114,6 +116,9 @@ export function ConversationView({ id }: { id: string }) {
       {current?.prev && <Button loading={busy === "prev"} onClick={() => void extend("prev")}>{t("載入較早的回合")}</Button>}
       {items.map((turn) => <TurnCard key={turn.id} turn={turn} highlight={turn.id === focus} />)}
       {current?.next && <Button loading={busy === "next"} onClick={() => void extend("next")}>{t("載入較晚的回合")}</Button>}
+      <ActionDock label={t("這筆紀錄的操作")}>
+        <ConversationExportPanel conversationId={id} />
+      </ActionDock>
     </div>
   );
 }
