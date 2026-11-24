@@ -2,6 +2,7 @@ import { LanguageSelect } from "@/lib/i18n-client";
 import { getTranslator } from "@/lib/i18n-server";
 import { signOut } from "@/auth";
 import { requireUser } from "@/lib/authz";
+import { logsConfigured } from "@/lib/logs";
 import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { organizations, projects } from "@/db/schema";
@@ -20,7 +21,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     .orderBy(asc(organizations.name), asc(organizations.id), asc(projects.name), asc(projects.id));
   const items: { key: SidebarKey; label: string }[] = [
     { key: "agents", label: "Agents" },
-    { key: "logs", label: "Logs" },
+    ...(logsConfigured() ? [{ key: "logs" as const, label: "Logs" }] : []),
     ...(user.isAdmin ? [{ key: "admin" as const, label: t("管理") }] : []),
   ];
   return (
