@@ -24,7 +24,8 @@ export const devLoginEnabled = devLogin.length > 0;
 // (src/lib/authz.ts), so an account with none just sees an empty list.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google, ...devLogin],
-  session: { strategy: "jwt" },
+  // Nothing re-issues the cookie (no middleware, no client session fetch), so this is a fixed time from sign-in, not an idle timeout.
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
   pages: { signIn: "/login" },
   callbacks: {
     async signIn({ profile, user, account }) {
