@@ -1,11 +1,11 @@
 /**
- * Write the inline request the runtime API would serve for every agent's
- * published version, one JSON line each, for verify_inline_requests.py.
+ * Write inline request configuration for every agent's published version,
+ * one JSON line each, for verify_inline_requests.py.
  *
  *   DATABASE_URL=... npx tsx scripts/dump-runtime-requests.ts > requests.jsonl
  */
 import { Pool } from "pg";
-import { toResponsesRequest } from "../src/lib/openai-shape";
+import { toResponsesConfig } from "../src/lib/openai-shape";
 
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -14,14 +14,14 @@ async function main() {
     from agents a join agent_versions v on v.agent_id = a.id and v.version = a.published_version
     where a.archived_at is null order by a.id`);
   for (const r of rows) {
-    let request: Record<string, unknown> | null = null;
+    let config: ReturnType<typeof toResponsesConfig> | null = null;
     let error: string | null = null;
     try {
-      request = toResponsesRequest(r);
+      config = toResponsesConfig(r);
     } catch (e) {
       error = (e as Error).message;
     }
-    process.stdout.write(JSON.stringify({ id: r.id, name: r.name, version: r.version, request, error }) + "\n");
+    process.stdout.write(JSON.stringify({ id: r.id, name: r.name, version: r.version, ...config, error }) + "\n");
   }
   await pool.end();
 }

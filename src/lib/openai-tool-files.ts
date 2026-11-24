@@ -52,22 +52,9 @@ function indexStatus(store: {
   return "failed";
 }
 
-/** Best effort: removes a store and the files it holds. Versions never reference a store that failed. */
-async function discardSearchIndex(access: ToolFileAccess, id: string) {
-  const remove = (path: string) => provider(access, path, { method: "DELETE", signal: AbortSignal.timeout(5_000) });
-  const listed = await provider(access, `vector_stores/${encodeURIComponent(id)}/files?limit=100`, { signal: AbortSignal.timeout(5_000) })
-    .then((response) => response.json() as Promise<{ data?: { id?: unknown }[] }>)
-    .catch(() => ({ data: [] }));
-  const fileIds = (listed.data ?? []).flatMap((file) => typeof file.id === "string" && toolFileId.test(file.id) ? [file.id] : []);
-  await Promise.allSettled([remove(`vector_stores/${encodeURIComponent(id)}`), ...fileIds.map((file) => remove(`files/${file}`))]);
-}
-
-/** A store whose indexing failed is unusable, so reporting that also deletes it rather than leaving it in the project. */
 export async function searchIndexStatus(access: ToolFileAccess, id: string) {
   const response = await provider(access, `vector_stores/${encodeURIComponent(id)}`);
-  const status = indexStatus(await response.json());
-  if (status === "failed") await discardSearchIndex(access, id);
-  return status;
+  return indexStatus(await response.json());
 }
 
 export async function uploadToolFiles(access: ToolFileAccess, files: File[], mode: ToolUploadMode) {
@@ -79,13 +66,10 @@ export async function uploadToolFiles(access: ToolFileAccess, files: File[], mod
       const body = new FormData();
       body.set("file", file);
       body.set("purpose", mode === "search" ? "assistants" : "user_data");
-      const response = await send(access, "files", { method: "POST", body, signal });
-      if (!response.ok) throw await rejected(response);
+      const response = await provider(access, "files", { method: "POST", body, signal });
       const result = await response.json() as { id?: unknown };
       if (typeof result.id !== "string" || !toolFileId.test(result.id)) throw new Error("OpenAI returned an invalid file ID");
-      // Recorded before the project check so a file created anywhere is still cleaned up.
       created.push({ id: result.id, name: file.name });
-      if (!inProject(access, response)) throw new ProviderError(response.status, "project_mismatch");
     }
     if (mode === "file") {
       return { id: created[0].id, attachments: created.map(({ id, name }) => ({ id, names: [name] })), status: "ready" as const };
@@ -104,6 +88,7 @@ export async function uploadToolFiles(access: ToolFileAccess, files: File[], mod
     if (status === "failed") throw new Error("OpenAI could not index the files");
     return { attachments: [{ id: storeId, names: created.map((file) => file.name) }], status };
   } catch (error) {
+    // Only this request's verified creations are eligible for rollback.
     const remove = (path: string) => provider(access, path, { method: "DELETE", signal: AbortSignal.timeout(5_000) });
     if (storeId) await Promise.allSettled([remove(`vector_stores/${storeId}`)]);
     await Promise.allSettled(created.map(({ id }) => remove(`files/${id}`)));

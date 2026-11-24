@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAgent, getEffectiveVersion, getVersion } from "@/lib/agents";
-import { toResponsesRequest } from "@/lib/openai-shape";
+import { toResponsesConfig } from "@/lib/openai-shape";
 import { runtimeAuthorized, runtimeError } from "@/lib/runtime-api";
-import { resolveSecrets } from "@/lib/secrets";
+import { resolveToolSecrets } from "@/lib/secrets";
 
 /**
  * One agent version as inline Responses API fields (`request`), with secret
@@ -26,9 +26,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/runtime/v1/a
   }
   if (!version) return runtimeError(404, "version not found");
 
-  let body;
+  let config;
   try {
-    body = await resolveSecrets(toResponsesRequest(version));
+    config = toResponsesConfig(version);
+    config.request.tools = await resolveToolSecrets(found.agent.projectId, config.request.tools);
   } catch (error) {
     return runtimeError(422, (error as Error).message);
   }
@@ -37,10 +38,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/runtime/v1/a
       id: found.agent.id,
       name: found.agent.name,
       project_id: found.agent.projectId,
+      project: found.projectName,
+      organization: found.organizationName,
       version: version.version,
       published_version: found.agent.publishedVersion,
       archived: found.agent.archivedAt !== null,
-      request: body,
+      ...config,
     },
     { headers: { "Cache-Control": "no-store" } },
   );

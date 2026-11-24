@@ -41,25 +41,33 @@ describe("OpenAI tool uploads", () => {
 
   it("treats a provider project mismatch and partial index failure as unusable", async () => {
     const upstream = vi.fn()
-      // A failed index is deleted along with its files, so the cleanup calls follow the status call.
       .mockResolvedValueOnce(response({ status: "completed", file_counts: { failed: 1, completed: 1 } }))
-      .mockResolvedValueOnce(response({ data: [] }))
-      .mockResolvedValueOnce(response({ deleted: true }))
       .mockResolvedValueOnce(response({ status: "completed" }, "proj_other"));
     vi.stubGlobal("fetch", upstream);
     await expect(searchIndexStatus(access, "vs_new")).resolves.toBe("failed");
     await expect(searchIndexStatus(access, "vs_new")).rejects.toThrow("project file request");
   });
 
-  it("deletes a store that failed indexing together with its files", async () => {
+  it("reports a failed index without deleting resources", async () => {
     const upstream = vi.fn()
-      .mockResolvedValueOnce(response({ status: "completed", file_counts: { failed: 1, completed: 0 } }))
-      .mockResolvedValueOnce(response({ data: [{ id: "file-one" }, { id: "not a file id" }] }))
-      .mockResolvedValue(response({ deleted: true }));
+      .mockResolvedValueOnce(response({ status: "completed", file_counts: { failed: 1, completed: 0 } }));
     vi.stubGlobal("fetch", upstream);
     await expect(searchIndexStatus(access, "vs_bad")).resolves.toBe("failed");
-    const deletes = upstream.mock.calls.filter(([, init]) => init?.method === "DELETE").map(([url]) => url).sort();
-    expect(deletes).toEqual(["https://api.openai.com/v1/files/file-one", "https://api.openai.com/v1/vector_stores/vs_bad"]);
+    expect(upstream).toHaveBeenCalledExactlyOnceWith("https://api.openai.com/v1/vector_stores/vs_bad", expect.not.objectContaining({ method: "DELETE" }));
+  });
+
+  it("rolls back a failed store and its files when the same upload created both", async () => {
+    const upstream = vi.fn()
+      .mockResolvedValueOnce(response({ id: "file-new" }))
+      .mockResolvedValueOnce(response({ id: "vs_new", status: "completed", file_counts: { failed: 1 } }))
+      .mockResolvedValueOnce(response({ deleted: true }))
+      .mockResolvedValueOnce(response({ deleted: true }));
+    vi.stubGlobal("fetch", upstream);
+    await expect(uploadToolFiles(access, [file("new.txt")], "search")).rejects.toThrow("OpenAI could not index the files");
+    expect(upstream.mock.calls.filter(([, init]) => init?.method === "DELETE").map(([url]) => url)).toEqual([
+      "https://api.openai.com/v1/vector_stores/vs_new",
+      "https://api.openai.com/v1/files/file-new",
+    ]);
   });
 
   it("leaves a store that is still indexing or ready alone", async () => {
@@ -83,13 +91,11 @@ describe("OpenAI tool uploads", () => {
     expect(JSON.stringify(error) + String((error as Error).message)).not.toContain("sk-abc");
   });
 
-  it("cleans up a file that was created in a different project than expected", async () => {
+  it("leaves files whose project does not match untouched", async () => {
     const upstream = vi.fn()
-      .mockResolvedValueOnce(response({ id: "file-stray" }, "proj_other"))
-      .mockResolvedValue(response({ deleted: true }));
+      .mockResolvedValueOnce(response({ id: "file-stray" }, "proj_other"));
     vi.stubGlobal("fetch", upstream);
     await expect(uploadToolFiles(access, [file("one.txt")], "file")).rejects.toMatchObject({ code: "project_mismatch" });
-    expect(upstream.mock.calls[1][0]).toBe("https://api.openai.com/v1/files/file-stray");
-    expect(upstream.mock.calls[1][1].method).toBe("DELETE");
+    expect(upstream).toHaveBeenCalledTimes(1);
   });
 });

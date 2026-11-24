@@ -157,6 +157,7 @@ def snapshot(raw: dict) -> dict:
         "top_p": raw.get("top_p"),
         "truncation": raw.get("truncation"),
         "parallel_tool_calls": raw.get("parallel_tool_calls"),
+        "max_tool_calls": raw.get("max_tool_calls"),
         "input_tokens": (raw.get("usage") or {}).get("input_tokens"),
         "model_unavailable": bool(raw.get("_model_unavailable")),
         "environment_recovered": bool(raw.get("_environment_recovered")),

@@ -4,19 +4,22 @@ import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { auditEvents, memberships, projects, secrets, users } from "@/db/schema";
+import { auditEvents, memberships, projects, secrets, users, type SecretGrant } from "@/db/schema";
+import { agentSettingsSchema } from "@/lib/agent-settings";
 import {
   createAgent,
   getAgent,
+  getVersion,
   publishVersion,
   saveVersion,
   setArchived,
   updateAgentMeta,
 } from "@/lib/agents";
 import { ForbiddenError, requireAdmin, requireProjectRole } from "@/lib/authz";
-import { instructionsToString, sanitizeTools } from "@/lib/openai-shape";
+import { mcpServerUrl, validMcpCredentialField } from "@/lib/mcp-credentials";
+import { sanitizeTools, toRuntimeMessages } from "@/lib/openai-shape";
 import { syncFromRcsl } from "@/lib/rcsl";
-import { encryptSecret } from "@/lib/secrets";
+import { encryptSecret, validateToolSecrets } from "@/lib/secrets";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -41,25 +44,17 @@ const versionSchema = z.object({
   model: z.string().trim().min(1, "必填"),
   instructions: z.array(messageSchema),
   tools: z.array(z.record(z.string(), z.unknown()).refine((t) => typeof t.type === "string", "每個工具都要有 type")),
-  settings: z.object({
-    reasoning: z.record(z.string(), z.unknown()).nullable().optional(),
-    text: z.record(z.string(), z.unknown()).nullable().optional(),
-    temperature: z.number().min(0).max(2).nullable().optional(),
-    top_p: z.number().min(0).max(1).nullable().optional(),
-    max_output_tokens: z.number().int().positive().nullable().optional(),
-    truncation: z.string().nullable().optional(),
-    parallel_tool_calls: z.boolean().nullable().optional(),
-  }),
+  settings: agentSettingsSchema,
   note: z.string().max(500).optional(),
 });
 
 export type VersionPayload = z.infer<typeof versionSchema>;
 
-function validateVersion(input: unknown) {
+async function validateVersion(projectId: string, input: unknown) {
   const parsed = versionSchema.parse(input);
   // Reject what the runtime could not send, at save time rather than in class.
-  instructionsToString(parsed.instructions);
-  sanitizeTools(parsed.tools);
+  toRuntimeMessages(parsed.instructions);
+  await validateToolSecrets(projectId, sanitizeTools(parsed.tools));
   return parsed;
 }
 
@@ -81,8 +76,9 @@ async function projectOf(agentId: string) {
 
 export async function saveVersionAction(agentId: string, input: unknown, publish: boolean) {
   return run(async () => {
-    const user = await requireProjectRole(await projectOf(agentId), "editor");
-    const version = await saveVersion(agentId, validateVersion(input), user.email, publish);
+    const projectId = await projectOf(agentId);
+    const user = await requireProjectRole(projectId, "editor");
+    const version = await saveVersion(agentId, await validateVersion(projectId, input), user.email, publish);
     revalidatePath(`/agents/${agentId}`);
     return version;
   });
@@ -90,7 +86,11 @@ export async function saveVersionAction(agentId: string, input: unknown, publish
 
 export async function publishVersionAction(agentId: string, version: number) {
   return run(async () => {
-    const user = await requireProjectRole(await projectOf(agentId), "editor");
+    const projectId = await projectOf(agentId);
+    const user = await requireProjectRole(projectId, "editor");
+    const stored = await getVersion(agentId, version);
+    if (!stored) throw new Error(`version ${version} does not exist`);
+    await validateVersion(projectId, stored);
     await publishVersion(agentId, version, user.email);
     revalidatePath(`/agents/${agentId}`);
   });
@@ -120,14 +120,12 @@ export async function createAgentAction(projectId: string, name: string, copyFro
     const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
     if (!project) throw new Error("專案不存在");
     if (!project.active) throw new Error("專案已停用");
-    const initial = copyFrom
-      ? validateVersion(copyFrom.version)
-      : validateVersion({
-          model: await mostUsedModel(),
-          instructions: [{ role: "developer", content: "" }],
-          tools: [],
-          settings: {},
-        });
+    const initial = await validateVersion(projectId, copyFrom?.version ?? {
+      model: await mostUsedModel(),
+      instructions: [{ role: "developer", content: "" }],
+      tools: [],
+      settings: {},
+    });
     const id = await createAgent(projectId, z.string().trim().min(1).parse(name), user.email, {
       ...initial,
       note: copyFrom ? `複製自 ${copyFrom.agentId}` : "",
@@ -231,6 +229,39 @@ export async function deleteSecretAction(name: string) {
     const admin = await requireAdmin();
     await db.delete(secrets).where(and(eq(secrets.name, name)));
     await db.insert(auditEvents).values({ actor: admin.email, action: "secret.delete", targetType: "secret", targetId: name });
+    revalidatePath("/admin");
+  });
+}
+
+export async function setSecretGrantAction(name: string, input: SecretGrant, enabled: boolean) {
+  return run(async () => {
+    const admin = await requireAdmin();
+    const grant = z.strictObject({
+      projectId: z.string().min(1),
+      serverUrl: z.string().trim().transform((value) => mcpServerUrl(value))
+        .refine((value) => value !== null, "請輸入完整的 HTTPS MCP 伺服器網址"),
+      field: z.string().trim().toLowerCase().refine(validMcpCredentialField, "請輸入 authorization 或 headers.名稱"),
+    }).parse(input);
+    const matches = (current: SecretGrant) => current.projectId === grant.projectId &&
+      current.serverUrl === grant.serverUrl && current.field === grant.field;
+    await db.transaction(async (tx) => {
+      const [secret] = await tx.select({ grants: secrets.grants }).from(secrets).where(eq(secrets.name, name)).for("update");
+      if (!secret) throw new Error("找不到憑證");
+      if (enabled) {
+        const [project] = await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, grant.projectId));
+        if (!project) throw new Error("專案不存在");
+      }
+      const retained = secret.grants.filter((current) => !matches(current));
+      const grants = enabled ? [...retained, grant] : retained;
+      await tx.update(secrets).set({ grants, updatedBy: admin.email, updatedAt: new Date() }).where(eq(secrets.name, name));
+      await tx.insert(auditEvents).values({
+        actor: admin.email,
+        action: enabled ? "secret.grant" : "secret.revoke",
+        targetType: "secret",
+        targetId: name,
+        detail: grant,
+      });
+    });
     revalidatePath("/admin");
   });
 }

@@ -385,10 +385,10 @@ function InstructionsEditor(props: {
   const multi = props.value.length > 1;
   const update = (i: number, patch: Partial<InstructionMessage>) =>
     props.onChange(props.value.map((m, j) => (j === i ? { ...m, ...patch } : m)));
-  const editor = (message: InstructionMessage, onChange: (content: string) => void, height: string) => typeof message.content === "string" ? <div className="instructions-monaco" style={{ height, flex: "none" }}><Editor height={height} defaultLanguage="markdown" value={message.content} onChange={(content) => onChange(content ?? "")} options={{ readOnly: props.readOnly, wordWrap: "on", minimap: { enabled: false }, lineNumbers: "on", fontSize: 14, scrollBeyondLastLine: false, unicodeHighlight: { ambiguousCharacters: false, invisibleCharacters: false } }} /></div> : <Alert type="warning" title={t("這段訊息含有圖片或檔案，無法以文字編輯，也無法直接送出。請改寫成純文字內容。")} description={<pre style={{ maxHeight: 200, overflow: "auto" }}>{JSON.stringify(message.content, null, 2)}</pre>} />;
+  const editor = (message: InstructionMessage, onChange: (content: string) => void, height: string) => typeof message.content === "string" ? <div className="instructions-monaco" style={{ height, flex: "none" }}><Editor height={height} defaultLanguage="markdown" value={message.content} onChange={(content) => onChange(content ?? "")} options={{ readOnly: props.readOnly, wordWrap: "on", minimap: { enabled: false }, lineNumbers: "on", fontSize: 14, scrollBeyondLastLine: false, unicodeHighlight: { ambiguousCharacters: false, invisibleCharacters: false } }} /></div> : <Alert type="warning" title={t("這段訊息含有圖片或檔案，將保留原格式。你可以匯入純文字取代它。")} description={<pre style={{ maxHeight: 200, overflow: "auto" }}>{JSON.stringify(message.content, null, 2)}</pre>} />;
 
   return <div className={`instructions-editor-body${multi ? " is-multi" : ""}`}>
-    {multi && <Alert type="info" title={t("這個 agent 有多段訊息。送給模型時會依序合併成一段 instructions。")} />}
+    {multi && <Alert type="info" title={t("這個 agent 的訊息會保留原本的角色與順序送給模型。")} />}
     {props.value.map((message, index) => <div key={index} className="instructions-editor-message">
       {multi && <Space wrap style={{ marginBottom: 4 }}><Select size="small" value={message.role} disabled={props.readOnly} onChange={(role) => update(index, { role })} options={["developer", "system", "user", "assistant"].map((role) => ({ value: role, label: role }))} />{!props.readOnly && <Button size="small" danger type="link" onClick={() => props.onChange(props.value.filter((_, i) => i !== index))}>{t("刪除這段")}</Button>}</Space>}
       {editor(message, (content) => update(index, { content }), multi ? "40vh" : props.fillAvailableHeight ? props.availableHeight ? `${props.availableHeight}px` : "100%" : "65vh")}
@@ -548,7 +548,7 @@ function ModelSettings(props: {
         items={[
           {
             key: "raw",
-            label: t("進階：以 JSON 編輯全部參數"),
+            label: t("進階：以 JSON 編輯模型參數"),
             children: (
               <>
                 <div style={{ border: "1px solid #e5e7eb" }}>
@@ -848,7 +848,7 @@ function ToolsEditor(props: {
           </Form>
         )}
         <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
-          {rich("MCP 等需要憑證的欄位請填 {0}，由管理員在「管理 / 憑證」設定實際值，不要直接貼上金鑰。", [<code key="secret">{"{{secret:name}}"}</code>])}</Typography.Paragraph>
+          {rich("在已授權的 MCP 憑證欄位填入 {0}。管理員可在「管理 / 憑證」授權專案、伺服器與欄位。", [<code key="secret">{"{{secret:name}}"}</code>])}</Typography.Paragraph>
         <div style={{ border: "1px solid #e5e7eb" }}>
           <Editor
             height="50vh"

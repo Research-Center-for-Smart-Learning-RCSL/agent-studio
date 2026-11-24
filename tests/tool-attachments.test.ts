@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toResponsesRequest } from "../src/lib/openai-shape";
+import { toResponsesConfig } from "../src/lib/openai-shape";
 import { attachmentNames, readToolJson, toolAttachments, withAttachmentNames } from "../src/lib/tool-attachments";
 
 describe("tool attachments", () => {
@@ -25,7 +25,7 @@ describe("tool attachments", () => {
   it("sends code interpreter files and file-search stores on the Responses request", () => {
     const code = toolAttachments({ type: "code_interpreter", container: { type: "auto", memory_limit: "4g" } })!;
     const search = toolAttachments({ type: "file_search", max_num_results: 5 })!;
-    const request = toResponsesRequest({
+    const { request } = toResponsesConfig({
       model: "gpt-example",
       instructions: [],
       settings: {},
@@ -50,7 +50,7 @@ describe("tool attachments", () => {
       { vs_new: ["lecture.pdf"], vs_removed: ["old.pdf"] },
     );
     expect(attachmentNames(scoped)).toEqual({ vs_new: ["lecture.pdf"] });
-    expect(toResponsesRequest({ model: "test", instructions: [], tools: [scoped], settings: {} }).tools)
+    expect(toResponsesConfig({ model: "test", instructions: [], tools: [scoped], settings: {} }).request.tools)
       .toEqual([{ type: "file_search", vector_store_ids: ["vs_old", "vs_new"] }]);
   });
 });

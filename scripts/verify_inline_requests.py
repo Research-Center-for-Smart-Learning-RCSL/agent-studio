@@ -42,8 +42,20 @@ def verify(item, export, http, fresh_prompt=False):
         return {**result, "status": "no export record"}
     if record.get("model_unavailable"):
         return {**result, "status": "skipped: model retired"}
+    if item.get("error"):
+        return {**result, "status": "invalid Studio configuration", "error": item["error"]}
     probe_fields = {"input": "ping", "max_output_tokens": 16, "store": False, "tool_choice": "none"}
     body = {**item["request"], **probe_fields}
+    messages = item.get("messages") or []
+    if messages:
+        body.pop("instructions", None)
+        if len(messages) == 1 and messages[0]["role"] == "developer" and isinstance(messages[0]["content"], str):
+            body["instructions"] = messages[0]["content"]
+        else:
+            body["input"] = [
+                *[{"type": "message", **message} for message in messages],
+                {"type": "message", "role": "user", "content": "ping"},
+            ]
     last_error = None
     for api_key in candidate_keys(record):
         tokens, error = measure(http, api_key, body)

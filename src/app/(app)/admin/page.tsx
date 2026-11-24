@@ -3,7 +3,7 @@ import { asc, desc, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { auditEvents, memberships, organizations, projects, secrets, users } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
-import { secretNamesIn } from "@/lib/secrets";
+import { credentialGranted, mcpCredentialReferences } from "@/lib/mcp-credentials";
 import { AdminPanel } from "./admin-panel";
 
 export default async function AdminPage() {
@@ -15,10 +15,13 @@ export default async function AdminPage() {
     db.select().from(memberships),
     db.select().from(organizations).orderBy(asc(organizations.name)),
     db.select().from(projects).orderBy(asc(projects.name)),
-    db.select({ name: secrets.name, description: secrets.description, updatedBy: secrets.updatedBy, updatedAt: secrets.updatedAt }).from(secrets).orderBy(asc(secrets.name)),
+    db.select({
+      name: secrets.name, description: secrets.description, grants: secrets.grants,
+      updatedBy: secrets.updatedBy, updatedAt: secrets.updatedAt,
+    }).from(secrets).orderBy(asc(secrets.name)),
     db.select().from(auditEvents).orderBy(desc(auditEvents.id)).limit(200),
-    db.execute<{ id: string; name: string; tools: unknown }>(sql`
-      select a.id, a.name, v.tools from agents a
+    db.execute<{ id: string; name: string; projectId: string; tools: Record<string, unknown>[] }>(sql`
+      select a.id, a.name, a.project_id as "projectId", v.tools from agents a
       join agent_versions v on v.agent_id = a.id and v.version = a.published_version
       where a.archived_at is null and v.tools::text like '%"mcp"%'`),
   ]);
@@ -28,15 +31,16 @@ export default async function AdminPage() {
     .map((r) => ({
       id: r.id,
       name: r.name,
-      servers: (r.tools as Record<string, unknown>[])
-        .filter((t) => t.type === "mcp" && secretNamesIn(t).size === 0)
+      servers: r.tools
+        .filter((t) => t.type === "mcp" && mcpCredentialReferences(t).length === 0)
         .map((t) => String(t.server_label ?? t.server_url ?? "mcp")),
     }))
     .filter((r) => r.servers.length);
-  const definedSecrets = new Set(secretRows.map((s) => s.name));
-  const missingSecrets = [
-    ...new Set(toolRows.rows.flatMap((r) => [...secretNamesIn(r.tools)]).filter((n) => !definedSecrets.has(n))),
-  ];
+  const grantsByName = new Map(secretRows.map((secret) => [secret.name, secret.grants]));
+  const unapprovedReferences = toolRows.rows.flatMap(({ id, name, projectId, tools }) => tools
+    .flatMap(mcpCredentialReferences)
+    .filter((reference) => !credentialGranted(grantsByName.get(reference.name), projectId, reference))
+    .map(({ serverUrl, field, name: secret }) => ({ id, name, projectId, serverUrl, field, secret })));
 
   return (
     <AdminPanel
@@ -48,7 +52,7 @@ export default async function AdminPage() {
       secrets={secretRows.map((s) => ({ ...s, updatedAt: s.updatedAt.toISOString() }))}
       audit={auditRows.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() }))}
       mcpWithoutSecret={mcpWithoutSecret}
-      missingSecrets={missingSecrets}
+      unapprovedReferences={unapprovedReferences}
     />
   );
 }
