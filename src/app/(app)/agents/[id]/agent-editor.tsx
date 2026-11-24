@@ -111,7 +111,11 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
       const monaco = settingsCardRef.current?.querySelector<HTMLElement>(".instructions-monaco");
       if (!versionCard || !monaco) return;
       const height = Math.floor(versionCard.getBoundingClientRect().bottom - monaco.getBoundingClientRect().top - 1);
-      if (height > 240) setInstructionsHeight((current) => current === height ? current : height);
+      if (height > 240) {
+        const minimumHeight = 520;
+        const nextHeight = Math.max(minimumHeight, height);
+        setInstructionsHeight((current) => current === nextHeight ? current : nextHeight);
+      }
     };
     updateHeight();
     const observer = new ResizeObserver(updateHeight);
@@ -230,7 +234,7 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
                     fullscreen={instructionsFullscreen}
                     onFullscreenChange={setInstructionsFullscreen}
                     fillAvailableHeight={activeTab === "instructions"}
-                    availableHeight={instructionsHeight ?? (activeTab === "instructions" ? Math.max(320, props.versions.length * 44) : null)}
+                    availableHeight={instructionsHeight ?? (activeTab === "instructions" ? 520 : null)}
                   />
                 ),
               },
