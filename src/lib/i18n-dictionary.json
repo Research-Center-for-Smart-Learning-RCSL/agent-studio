@@ -244,7 +244,17 @@
     "有未儲存的修改": "Unsaved changes",
     "版本備註（選填）": "Version note (optional)",
     "還原": "Restore",
-    "專案篩選": "Project filter"
+    "專案篩選": "Project filter",
+    "上傳使用者最新提供的圖片並回傳網址": "Upload the user's latest image and return its URL",
+    "上傳使用者最新錄製的語音並回傳網址": "Upload the user's latest voice recording and return its URL",
+    "上傳圖片、語音或沙盒檔案並回傳網址": "Upload an image, a recording, or a sandbox file and return its URL",
+    "以機器人名稱或 SQL 查詢機器人資料": "Query robot data by robot name or SQL",
+    "設定對話流程的逾時秒數": "Set the timeout in seconds for the conversation flow",
+    "列出此 agent 工作區中的檔案": "List the files in this agent's workspace",
+    "讀取工作區中的檔案": "Read a file from the workspace",
+    "將檔案存入工作區並回傳網址": "Save a file into the workspace and return its URL",
+    "執行環境不會執行": "Not executed by runtime",
+    "執行環境沒有此函式的處理程式，模型呼叫時只會得到「Unknown tool」。": "The runtime has no handler for this function; when the model calls it, it only gets \"Unknown tool\"."
   },
   "pl": {
     "Agent 管理": "Zarządzanie agentami",
@@ -491,6 +501,16 @@
     "有未儲存的修改": "Niezapisane zmiany",
     "版本備註（選填）": "Notatka do wersji (opcjonalnie)",
     "還原": "Przywróć",
-    "專案篩選": "Filtr projektów"
+    "專案篩選": "Filtr projektów",
+    "上傳使用者最新提供的圖片並回傳網址": "Prześlij najnowszy obraz użytkownika i zwróć jego adres URL",
+    "上傳使用者最新錄製的語音並回傳網址": "Prześlij najnowsze nagranie głosowe użytkownika i zwróć jego adres URL",
+    "上傳圖片、語音或沙盒檔案並回傳網址": "Prześlij obraz, nagranie lub plik z piaskownicy i zwróć jego adres URL",
+    "以機器人名稱或 SQL 查詢機器人資料": "Wyszukaj dane robota według nazwy robota lub SQL",
+    "設定對話流程的逾時秒數": "Ustaw limit czasu przepływu rozmowy w sekundach",
+    "列出此 agent 工作區中的檔案": "Wyświetl pliki w obszarze roboczym tego agenta",
+    "讀取工作區中的檔案": "Odczytaj plik z obszaru roboczego",
+    "將檔案存入工作區並回傳網址": "Zapisz plik w obszarze roboczym i zwróć jego adres URL",
+    "執行環境不會執行": "Nie jest wykonywana przez środowisko",
+    "執行環境沒有此函式的處理程式，模型呼叫時只會得到「Unknown tool」。": "Środowisko nie ma obsługi tej funkcji; gdy model ją wywoła, otrzyma tylko \"Unknown tool\"."
   }
 }

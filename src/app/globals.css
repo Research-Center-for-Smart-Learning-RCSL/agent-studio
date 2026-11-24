@@ -683,6 +683,7 @@ a {
 .available-tool-row.is-enabled { background: #edf3f6; border-color: #9fb3c2; }
 .enabled-tool-info { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .enabled-tool-info > strong, .enabled-tool-info > .ant-typography { min-width: 0; overflow-wrap: anywhere; }
+.available-tool-description { flex-basis: 100%; font-size: 12px; }
 .available-tools-section { margin-top: 24px; }
 .available-tools-section > .ant-typography { margin-bottom: 10px; }
 .available-tools-section .ant-collapse-content-box { padding: 12px !important; }

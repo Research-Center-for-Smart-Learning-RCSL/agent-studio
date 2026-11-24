@@ -1,4 +1,5 @@
 "use client";
+import { runtimeFunctionNames, runtimeFunctions } from "@/lib/runtime-functions";
 import { useI18n } from "@/lib/i18n-client";
 import { readDirectoryView } from "../../directory-view";
 
@@ -701,7 +702,7 @@ function ToolsEditor(props: {
   const availableGroups: {
     key: string;
     title: string;
-    items: { key: string; name: string; tool: Record<string, unknown>; configuredIndex?: number; createOnly?: boolean }[];
+    items: { key: string; name: string; tool: Record<string, unknown>; configuredIndex?: number; createOnly?: boolean; description?: string; unsupported?: boolean }[];
   }[] = [
     { key: "built-in", title: t("內建工具"), items: [
       { key: "code_interpreter", name: t("程式碼直譯器"), tool: { type: "code_interpreter", container: { type: "auto" } } },
@@ -711,7 +712,15 @@ function ToolsEditor(props: {
       { key: "file_search", name: t("檔案搜尋"), tool: { type: "file_search", vector_store_ids: [] } },
     ] },
     { key: "custom", title: t("自訂函式"), items: [
-      ...props.tools.flatMap((configured, index) => configured.type === "function" ? [{ key: `function-${index}`, name: String(configured.name || t("自訂函式")), tool: configured, configuredIndex: index }] : []),
+      ...runtimeFunctions.map((runtime) => ({ key: `runtime-${runtime.name}`, name: runtime.name, tool: runtime.tool, description: t(runtime.description) })),
+      ...props.tools.flatMap((configured, index) => configured.type === "function" && !runtimeFunctionNames.has(String(configured.name)) ? [{
+        key: `function-${index}`,
+        name: String(configured.name || t("自訂函式")),
+        tool: configured,
+        configuredIndex: index,
+        description: t("執行環境沒有此函式的處理程式，模型呼叫時只會得到「Unknown tool」。"),
+        unsupported: true,
+      }] : []),
       { key: "custom_function", name: t("新增自訂函式"), tool: { type: "function", name: "", description: "", parameters: { type: "object", properties: {} } }, createOnly: true },
     ] },
     { key: "integrations", title: t("外部整合"), items: props.templates.filter((template) => template.tool.type === "mcp").map((template) => ({ key: template.key, name: toolLabel(template.tool), tool: template.tool })) },
@@ -735,7 +744,7 @@ function ToolsEditor(props: {
             const activeIndex = configuredIndex(item);
             const enabled = activeIndex >= 0;
             return <article className={`available-tool-row${enabled ? " is-enabled" : ""}`} key={item.key}>
-              <div className="enabled-tool-info"><strong>{item.name}</strong><Typography.Text type="secondary">{String(item.tool.type)}</Typography.Text>{enabled && <Tag color="blue">{t("已啟用")}</Tag>}</div>
+              <div className="enabled-tool-info"><strong>{item.name}</strong><Typography.Text type="secondary">{String(item.tool.type)}</Typography.Text>{enabled && <Tag color="blue">{t("已啟用")}</Tag>}{item.unsupported && <Tag color="warning">{t("執行環境不會執行")}</Tag>}{item.description && <Typography.Text type="secondary" className="available-tool-description">{item.description}</Typography.Text>}</div>
               <Space wrap>
                 {enabled && <Button type="link" size="small" onClick={() => open(activeIndex, props.tools[activeIndex])}>{props.readOnly ? t("檢視") : t("設定")}</Button>}
                 {item.createOnly ? <Button disabled={props.readOnly} onClick={() => open("new", item.tool)}>{t("建立並設定")}</Button> : <Switch
