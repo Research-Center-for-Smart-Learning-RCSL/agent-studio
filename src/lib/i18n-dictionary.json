@@ -258,7 +258,12 @@
     "開啟選單": "Open menu",
     "展開側欄": "Expand sidebar",
     "收合側欄": "Collapse sidebar",
-    "Logs 整合進行中，尚未連線。": "Logs integration is in progress and is not connected yet."
+    "Logs 整合進行中，尚未連線。": "Logs integration is in progress and is not connected yet.",
+    "Logs 尚未設定": "Logs is not configured",
+    "來源不符": "Request origin does not match",
+    "找不到": "Not found",
+    "可讀取的專案過多，請縮小專案篩選": "Too many readable projects; narrow the project filter",
+    "無法連線到 Logs": "Cannot reach Logs"
   },
   "pl": {
     "Agent 管理": "Zarządzanie agentami",
@@ -519,6 +524,11 @@
     "開啟選單": "Otwórz menu",
     "展開側欄": "Rozwiń pasek boczny",
     "收合側欄": "Zwiń pasek boczny",
-    "Logs 整合進行中，尚未連線。": "Integracja Logs jest w toku i nie jest jeszcze połączona."
+    "Logs 整合進行中，尚未連線。": "Integracja Logs jest w toku i nie jest jeszcze połączona.",
+    "Logs 尚未設定": "Logs nie jest skonfigurowane",
+    "來源不符": "Źródło żądania się nie zgadza",
+    "找不到": "Nie znaleziono",
+    "可讀取的專案過多，請縮小專案篩選": "Zbyt wiele dostępnych projektów; zawęź filtr projektu",
+    "無法連線到 Logs": "Nie można połączyć się z Logs"
   }
 }

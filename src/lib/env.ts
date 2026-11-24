@@ -25,6 +25,15 @@ export const env = {
   get rcslAuthorization() {
     return required("RCSL_AUTHORIZATION");
   },
+  /** Base URL of the OpenAI Logs Manager API (its web container's /api); Logs is hidden when unset. */
+  get logsApi(): string | null {
+    const value = process.env.LOGS_API?.trim();
+    return value ? value.replace(/\/+$/, "") : null;
+  },
+  /** Shared with the Logs API (STUDIO_SERVICE_TOKEN there); never sent to a browser. */
+  get logsServiceToken(): string | null {
+    return process.env.LOGS_SERVICE_TOKEN?.trim() || null;
+  },
   /** Comma-separated emails that are always admins. */
   get adminEmails(): Set<string> {
     return new Set(
