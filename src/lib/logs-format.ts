@@ -161,8 +161,8 @@ export function highlightParts(text: string, terms: string[]): { text: string; m
   return parts;
 }
 
-export type ListFilters = { q: string; runtime: string; robot: string; bookmarked: string; since: string; until: string; status: string };
-export const emptyFilters: ListFilters = { q: "", runtime: "", robot: "", bookmarked: "", since: "", until: "", status: "" };
+export type ListFilters = { q: string; runtime: string; robot: string; bookmarked: string; since: string; until: string; status: string; kind: string };
+export const emptyFilters: ListFilters = { q: "", runtime: "", robot: "", bookmarked: "", since: "", until: "", status: "", kind: "" };
 
 const day = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -173,6 +173,7 @@ export function filterParams(f: ListFilters): Record<string, string | boolean | 
     robot: f.robot.trim() || undefined,
     runtime: f.runtime === "web" || f.runtime === "robot" ? f.runtime : undefined,
     status: f.status === "ok" || f.status === "failed" || f.status === "no_response" ? f.status : undefined,
+    kind: f.kind === "stt" || f.kind === "tts" ? f.kind : undefined,
     bookmarked: f.bookmarked === "1" ? true : undefined,
     since: day.test(f.since) ? taipeiDayStart(f.since) : undefined,
     until: day.test(f.until) ? taipeiDayEnd(f.until) : undefined,

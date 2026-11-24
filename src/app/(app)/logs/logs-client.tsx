@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { App } from "antd";
 import { logsPath } from "@/lib/logs-format";
 import type { Page } from "@/lib/logs-types";
 
@@ -26,7 +27,7 @@ export function LogsProvider({ userEmail, children }: { userEmail: string; child
     window.addEventListener("agent-studio-scope", follow);
     return () => window.removeEventListener("agent-studio-scope", follow);
   }, [userEmail]);
-  return <ScopeContext.Provider value={state}>{children}</ScopeContext.Provider>;
+  return <ScopeContext.Provider value={state}><App component={false}>{children}</App></ScopeContext.Provider>;
 }
 
 export function useLogsScope() {

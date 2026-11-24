@@ -56,11 +56,11 @@ describe("logs formatting", () => {
 });
 
 describe("list filters", () => {
-  const base = { q: "", runtime: "", robot: "", bookmarked: "", since: "", until: "", status: "" };
+  const base = { q: "", runtime: "", robot: "", bookmarked: "", since: "", until: "", status: "", kind: "" };
 
   it("sends only what is set, with Taipei day bounds", () => {
     expect(filterParams(base)).toEqual({
-      q: undefined, robot: undefined, runtime: undefined, status: undefined, bookmarked: undefined, since: undefined, until: undefined,
+      q: undefined, robot: undefined, runtime: undefined, status: undefined, kind: undefined, bookmarked: undefined, since: undefined, until: undefined,
     });
     expect(filterParams({ ...base, q: " 紅茶 ", runtime: "robot", bookmarked: "1", since: "2026-11-01", until: "2026-11-30" }))
       .toMatchObject({ q: "紅茶", runtime: "robot", bookmarked: true, since: "2026-11-01T00:00:00+08:00", until: "2026-12-01T00:00:00+08:00" });

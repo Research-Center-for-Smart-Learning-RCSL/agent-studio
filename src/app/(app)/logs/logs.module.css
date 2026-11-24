@@ -194,3 +194,70 @@
   background: #fff1a8;
   color: inherit;
 }
+
+.extras {
+  display: grid;
+  gap: 10px;
+  margin-block-start: 8px;
+  padding-block-start: 8px;
+  border-block-start: 1px dashed var(--studio-border);
+}
+
+.note {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding-block: 4px;
+  border-block-end: 1px solid var(--studio-border);
+}
+
+.note .text {
+  flex: 1 1 240px;
+  overflow-wrap: anywhere;
+}
+
+.noteForm {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-block-start: 6px;
+}
+
+.noteForm textarea {
+  flex: 1 1 280px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--studio-border);
+  border-radius: 10px;
+}
+
+.tile strong {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.bars {
+  width: 100%;
+  height: 120px;
+}
+
+.barOk {
+  fill: var(--studio-accent);
+}
+
+.barFailed {
+  fill: #b42318;
+}

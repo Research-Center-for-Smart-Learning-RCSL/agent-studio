@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n-client";
 import { agentWhere } from "@/lib/logs-format";
 import type { ConversationTurnPage, Turn } from "@/lib/logs-types";
 import { LogsError, logsGet, logsSend, useLogsScope, type Params } from "./logs-client";
+import { ConversationNotes, ConversationTitle } from "./curation";
 import { ErrorNote } from "./logs-ui";
 import styles from "./logs.module.css";
 import { TurnCard } from "./turn-card";
@@ -88,7 +89,7 @@ export function ConversationView({ id }: { id: string }) {
     <div className={styles.page}>
       <div className={styles.header}>
         <Link href="/logs">{t("← 回到對話列表")}</Link>
-        <h1>{head?.conversation_title || id}</h1>
+        <ConversationTitle id={id} fallback={head?.conversation_title || id} />
         <Bookmark id={id} />
       </div>
       {head && (
@@ -105,6 +106,7 @@ export function ConversationView({ id }: { id: string }) {
           </span>
         </div>
       )}
+      <ConversationNotes id={id} />
       {missing && <p role="status">{t("這個對話裡沒有指定的回合，已從開頭顯示。")}</p>}
       {state === null || (current === null && !state.error) ? <Spin /> : null}
       {current?.error && <ErrorNote error={current.error} onRetry={() => setReloads((n) => n + 1)} />}

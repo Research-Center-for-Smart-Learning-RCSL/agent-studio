@@ -1,9 +1,11 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
-import { Empty, Spin, Table } from "antd";
+import { Button, Empty, Spin, Table } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { agentWhere, wallClock } from "@/lib/logs-format";
 import type { ConversationSummary } from "@/lib/logs-types";
+import { ExportDialog } from "./export-dialog";
 import { usePagedLogs } from "./logs-client";
 import { FilterBar, useUrlFilters } from "./logs-filters";
 import { ErrorNote, Highlight, LoadMore, RuntimeTag } from "./logs-ui";
@@ -13,9 +15,12 @@ import { conversationHref } from "./turn-card";
 export function ConversationList() {
   const { t } = useI18n();
   const { filters, params, set, reset, bad } = useUrlFilters();
-  const { status: _status, ...conversationFilters } = params;
+  const { status: _status, kind: _kind, ...conversationFilters } = params;
   void _status;
+  void _kind;
   const list = usePagedLogs<ConversationSummary>("/v1/conversations", { ...conversationFilters, limit: 50 }, !bad);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [exporting, setExporting] = useState(false);
   const empty = !list.loading && !list.error && list.items.length === 0;
   return (
     <div className={styles.page}>
@@ -27,12 +32,15 @@ export function ConversationList() {
         <>
           <div className={styles.status}>
             <span>{t("依最近活動排序")}</span>
+            {selected.length > 0 && <Button size="small" onClick={() => setExporting(true)}>{t("匯出所選（{0}）", [selected.length])}</Button>}
+            {selected.length > 0 && <a onClick={() => setSelected([])}>{t("取消選取")}</a>}
             <a onClick={list.reload}>{t("重新整理")}</a>
           </div>
           <Table<ConversationSummary>
             rowKey="conversation"
             size="small"
             pagination={false}
+            rowSelection={{ selectedRowKeys: selected, onChange: (keys) => setSelected(keys.map(String).slice(0, 200)) }}
             dataSource={list.items}
             scroll={{ x: "max-content" }}
             columns={[
@@ -74,6 +82,7 @@ export function ConversationList() {
           <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onMore={list.loadMore} count={list.items.length} unit={t("個對話")} />
         </>
       )}
+      <ExportDialog open={exporting} onClose={() => setExporting(false)} conversations={selected} />
     </div>
   );
 }

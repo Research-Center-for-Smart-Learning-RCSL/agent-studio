@@ -12,6 +12,13 @@ export function LogsNav({ isAdmin }: { isAdmin: boolean }) {
   const items: Item[] = [
     { key: "conversations", href: "/logs", label: t("對話") },
     { key: "turns", href: "/logs/turns", label: t("回合") },
+    { key: "speech", href: "/logs/speech", label: t("語音") },
+    { key: "bookmarks", href: "/logs/bookmarks", label: t("書籤") },
+    { key: "exports", href: "/logs/exports", label: t("匯出") },
+    { key: "analytics", href: "/logs/analytics", label: t("分析"), adminOnly: true },
+    { key: "feedback", href: "/logs/feedback", label: t("意見板") },
+    { key: "health", href: "/logs/health", label: t("擷取狀態"), adminOnly: true },
+    { key: "users", href: "/logs/users", label: t("帳號"), adminOnly: true },
   ];
   const visible = items.filter((item) => isAdmin || !item.adminOnly);
   const active = visible

@@ -41,8 +41,8 @@ function CommitInput({ value, onCommit, ...props }: { value: string; onCommit: (
   return <Input {...props} value={text} onChange={(e) => setDraft({ from: value, text: e.target.value })} onPressEnter={commit} onBlur={commit} />;
 }
 
-export function FilterBar({ filters, set, reset, bad, showStatus = false, searchPlaceholder }: {
-  filters: ListFilters; set: (patch: Partial<ListFilters>) => void; reset: () => void; bad: boolean; showStatus?: boolean; searchPlaceholder: string;
+export function FilterBar({ filters, set, reset, bad, showStatus = false, showKind = false, searchPlaceholder }: {
+  filters: ListFilters; set: (patch: Partial<ListFilters>) => void; reset: () => void; bad: boolean; showStatus?: boolean; showKind?: boolean; searchPlaceholder: string;
 }) {
   const { t } = useI18n();
   const active = keys.some((key) => filters[key] !== "");
@@ -58,6 +58,16 @@ export function FilterBar({ filters, set, reset, bad, showStatus = false, search
           onChange={(runtime) => set({ runtime: runtime ?? "" })}
           options={[{ value: "robot", label: t("機器人") }, { value: "web", label: t("網頁") }]}
         />
+        {showKind && (
+          <Select
+            style={{ width: 150 }}
+            allowClear
+            placeholder={t("語音種類")}
+            value={filters.kind || undefined}
+            onChange={(kind) => set({ kind: kind ?? "" })}
+            options={[{ value: "stt", label: t("語音轉文字") }, { value: "tts", label: t("文字轉語音") }]}
+          />
+        )}
         {showStatus && (
           <Select
             style={{ width: 130 }}

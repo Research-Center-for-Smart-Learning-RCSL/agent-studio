@@ -1,9 +1,11 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
-import { Tag } from "antd";
+import { Button, Tag } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { agentWhere, durationText, hasMedia, wallClock } from "@/lib/logs-format";
 import type { Turn } from "@/lib/logs-types";
+import { TurnExtras } from "./curation";
 import { MediaList, MessageText, RuntimeTag, StatusTag, Uploads } from "./logs-ui";
 import styles from "./logs.module.css";
 
@@ -13,6 +15,8 @@ export const conversationHref = (id: string, turn?: string) =>
 /** One exchange: what the user said, then the reply. */
 export function TurnCard({ turn, highlight = false, query = "", showConversation = false }: { turn: Turn; highlight?: boolean; query?: string; showConversation?: boolean }) {
   const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [tags, setTags] = useState<string[] | null>(null);
   // A robot turn's media are the attachments the tablet sent; any other turn's came with the reply.
   const fromUser = turn.endpoint === "robot";
   const userMedia = fromUser ? turn.media : null;
@@ -26,7 +30,7 @@ export function TurnCard({ turn, highlight = false, query = "", showConversation
         {turn.latency_ms != null && <span>{durationText(turn.latency_ms)}</span>}
         <RuntimeTag endpoint={turn.endpoint} robotSerial={turn.robot_serial} robotName={turn.robot_name} />
         {turn.agent && <span title={agentWhere(turn)}>{turn.agent}</span>}
-        {turn.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
+        {(tags ?? turn.tags).map((tag) => <Tag key={tag}>{tag}</Tag>)}
         {showConversation && turn.conversation && (
           <Link className={styles.push} href={conversationHref(turn.conversation, turn.id)}>{t("在對話中查看")}</Link>
         )}
@@ -55,6 +59,8 @@ export function TurnCard({ turn, highlight = false, query = "", showConversation
         </div>
       )}
       {turn.error_text && <p className={styles.error}>{turn.error_text}</p>}
+      <Button size="small" type="link" onClick={() => setOpen((v) => !v)}>{open ? t("收合標註與錄音") : t("標註與錄音")}</Button>
+      {open && <TurnExtras turnId={turn.id} onTags={setTags} />}
     </article>
   );
 }
