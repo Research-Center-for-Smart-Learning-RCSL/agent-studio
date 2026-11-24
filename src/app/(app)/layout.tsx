@@ -7,6 +7,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { organizations, projects } from "@/db/schema";
 import { AppSidebar, type SidebarKey } from "./app-sidebar";
+import { AppSound } from "./app-sound";
 import { ScopeFilter } from "./scope-filter";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -46,6 +47,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </div>
         </header>
         <main className="studio-main">{children}</main>
+        <AppSound />
       </div>
     </div>
   );

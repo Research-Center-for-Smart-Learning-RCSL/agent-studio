@@ -1,10 +1,11 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button, Slider, Switch } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { getAudioSettings, setAudioSettings, useAudioSettings } from "@/lib/audio-settings";
-import { playEffect } from "@/lib/sfx";
-import styles from "./home-sound.module.css";
+import { installSoundEffects } from "@/lib/sfx";
+import styles from "./app-sound.module.css";
 
 const tracks = [
   { src: "/music/gymnopedie-1.mp3", title: "Satie, Gymnopédie No. 1" },
@@ -12,18 +13,19 @@ const tracks = [
   { src: "/music/nocturne-op55-no2.mp3", title: "Chopin, Nocturne Op. 55 No. 2" },
 ] as const;
 
-/** What counts as a button for the click sound; the robot plays its own. */
-const pressable = "button:not([disabled]), [role=button], a.agent-open, .ant-switch";
-
-/** Background piano on the home page and the click sounds, with one panel to set the volume or turn either off. */
-export function HomeSound() {
+/** Click and dialog sounds on every page, background piano on the home page, and one panel to set the volume or turn either off. */
+export function AppSound() {
   const { t } = useI18n();
   const settings = useAudioSettings();
+  const onHome = usePathname() === "/";
+  const onHomeRef = useRef(onHome);
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(0);
+  const getMusicOn = () => getAudioSettings().music && onHomeRef.current;
+  useEffect(() => { onHomeRef.current = onHome; }, [onHome]);
 
   const next = useCallback((step: number) => setIndex((i) => (i + step + tracks.length) % tracks.length), []);
 
@@ -61,7 +63,7 @@ export function HomeSound() {
   useEffect(() => {
     const element = audio.current;
     if (!element) return;
-    if (!settings.music) {
+    if (!settings.music || !onHome) {
       element.pause();
       return;
     }
@@ -77,7 +79,7 @@ export function HomeSound() {
     };
     for (const name of events) window.addEventListener(name, retry);
     return () => { for (const name of events) window.removeEventListener(name, retry); };
-  }, [settings.music]);
+  }, [settings.music, onHome]);
 
   // A background tab stays quiet.
   useEffect(() => {
@@ -91,16 +93,7 @@ export function HomeSound() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
-  useEffect(() => {
-    const onClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      const button = target?.closest(pressable);
-      if (!button || button.closest("[data-sound]")) return;
-      playEffect("click");
-    };
-    document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
-  }, []);
+  useEffect(() => installSoundEffects(), []);
 
   const label = t("聲音設定");
   return (
@@ -126,6 +119,7 @@ export function HomeSound() {
               onChange={(value) => setAudioSettings({ volume: value / 100 })}
             />
           </div>
+          {onHome && (
           <div className={styles.track}>
             <span className={styles.title} aria-live="polite">{settings.music ? tracks[index].title : t("背景音樂已關閉")}</span>
             <span className={styles.skip}>
@@ -133,6 +127,7 @@ export function HomeSound() {
               <Button size="small" type="text" aria-label={t("下一首")} disabled={!settings.music} onClick={() => next(1)}>›</Button>
             </span>
           </div>
+          )}
           <p className={styles.credit}>{t("鋼琴曲來自 Musopen，公有領域或 CC0。")}</p>
         </div>
       )}
@@ -148,8 +143,4 @@ export function HomeSound() {
       </button>
     </div>
   );
-}
-
-function getMusicOn() {
-  return getAudioSettings().music;
 }
