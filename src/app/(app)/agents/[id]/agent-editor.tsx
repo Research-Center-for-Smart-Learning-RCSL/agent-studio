@@ -32,6 +32,7 @@ import {
 } from "antd";
 import type { AgentSettings, InstructionMessage } from "@/db/schema";
 import { attachmentNames, maxToolFiles, maxToolUploadBytes, maxToolUploadCount, readToolJson, toolAttachments, toolFileId, toolVectorStoreId, withAttachmentNames, type ToolUploadAttachment } from "@/lib/tool-attachments";
+import { maxToolSkills, toolSkillId, toolSkills } from "@/lib/tool-skills";
 import { publishVersionAction, saveVersionAction, setArchivedAction, updateAgentMetaAction } from "../../../actions";
 
 export type ToolTemplate = { key: string; tool: Record<string, unknown> };
@@ -626,10 +627,33 @@ function ToolsEditor(props: {
     }
   }, [editing, text]);
   const attachments = tool ? toolAttachments(tool) : null;
+  const skills = tool ? toolSkills(tool) : null;
+  const [projectSkills, setProjectSkills] = useState<{ id: string; name: string; description: string }[] | null>(null);
+  const [skillsError, setSkillsError] = useState<string>();
   const isFile = attachments?.kind === "file";
   const needsVectorStore = attachments?.kind === "vectorStore" && attachments.refs.length === 0;
   const names = tool ? attachmentNames(tool) : {};
   const endpoint = `/api/agents/${encodeURIComponent(props.agentId)}/tool-files`;
+
+  const skillsEndpoint = `/api/agents/${encodeURIComponent(props.agentId)}/skills`;
+  const wantsSkillList = editing !== null && !!skills && props.canUpload;
+  useEffect(() => {
+    if (!wantsSkillList || projectSkills) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const response = await fetch(skillsEndpoint, { signal: controller.signal });
+        const result = await readJson<{ skills: { id: string; name: string; description: string }[]; error: string }>(response);
+        if (!response.ok || !Array.isArray(result.skills)) throw new Error(result.error || "暫時無法讀取專案的 skills，仍可手動輸入 skill ID");
+        setProjectSkills(result.skills);
+        setSkillsError(undefined);
+      } catch (issue) {
+        if (controller.signal.aborted) return;
+        setSkillsError(issue instanceof Error ? issue.message : "暫時無法讀取專案的 skills，仍可手動輸入 skill ID");
+      }
+    })();
+    return () => controller.abort();
+  }, [wantsSkillList, projectSkills, skillsEndpoint]);
 
   function open(index: number | "new", tool: Record<string, unknown>) {
     setEditing(index);
@@ -845,6 +869,41 @@ function ToolsEditor(props: {
                 <Typography.Paragraph type="secondary">{t("此專案尚未啟用本機上傳。")}</Typography.Paragraph>
               )
             )}
+          </Form>
+        )}
+        {skills && (
+          <Form layout="vertical">
+            <Form.Item
+              label="Skills"
+              htmlFor="tool-skill-ids"
+              validateStatus={skillsError ? "warning" : undefined}
+              help={skillsError ? translateUploadError(skillsError) : undefined}
+              extra={skillsError ? undefined : t("選擇專案內已有的 skill，Hosted Shell 執行時模型可以讀取並使用它。")}
+            >
+              <Select
+                id="tool-skill-ids"
+                aria-label="Skills"
+                mode="tags"
+                value={skills.ids}
+                placeholder={t("選擇或輸入 skill ID")}
+                loading={wantsSkillList && !projectSkills && !skillsError}
+                options={(projectSkills ?? []).map(({ id, name, description }) => ({ value: id, label: name, title: description }))}
+                optionFilterProp="label"
+                maxTagTextLength={40}
+                disabled={props.readOnly || uploading}
+                onChange={(ids: string[]) => {
+                  if (ids.some((id) => !toolSkillId.test(id) && !skills.ids.includes(id))) {
+                    message.error(t("請輸入有效的 skill ID"));
+                    return;
+                  }
+                  if (ids.length > maxToolSkills && ids.length > skills.ids.length) {
+                    message.error(t("最多可加入 {0} 個 skill", [maxToolSkills]));
+                    return;
+                  }
+                  setText(JSON.stringify(skills.apply(ids), null, 2));
+                }}
+              />
+            </Form.Item>
           </Form>
         )}
         <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>

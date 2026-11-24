@@ -530,7 +530,14 @@
     "這筆紀錄的操作": "Actions for this record",
     "還沒有任何匯出。可在逐輪紀錄或對話頁建立匯出。": "No exports yet. You can create one from the turns or conversation pages.",
     "關鍵字": "Keywords",
-    "附上我的筆記（只含我自己寫的）": "Include my notes (only ones I wrote)"
+    "附上我的筆記（只含我自己寫的）": "Include my notes (only ones I wrote)",
+    "選擇專案內已有的 skill，Hosted Shell 執行時模型可以讀取並使用它。": "Pick skills that already exist in the project. The model can read and use them when Hosted Shell runs.",
+    "選擇或輸入 skill ID": "Select or enter a skill ID",
+    "請輸入有效的 skill ID": "Enter a valid skill ID",
+    "最多可加入 {0} 個 skill": "Up to {0} skills can be added",
+    "暫時無法讀取專案的 skills，仍可手動輸入 skill ID": "The project's skills cannot be loaded right now. You can still enter a skill ID by hand.",
+    "專案尚未啟用 OpenAI 憑證查詢": "OpenAI lookups are not enabled for this project",
+    "專案的憑證已失效，請聯絡管理員": "The project credential is no longer valid. Contact an administrator."
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1063,6 +1070,13 @@
     "這筆紀錄的操作": "Akcje dla tego rekordu",
     "還沒有任何匯出。可在逐輪紀錄或對話頁建立匯出。": "Brak eksportów. Możesz je utworzyć na stronie tur lub rozmów.",
     "關鍵字": "Słowa kluczowe",
-    "附上我的筆記（只含我自己寫的）": "Dołącz moje notatki (tylko napisane przeze mnie)"
+    "附上我的筆記（只含我自己寫的）": "Dołącz moje notatki (tylko napisane przeze mnie)",
+    "選擇專案內已有的 skill，Hosted Shell 執行時模型可以讀取並使用它。": "Wybierz skille istniejące w projekcie. Model może ich używać podczas działania Hosted Shell.",
+    "選擇或輸入 skill ID": "Wybierz lub wpisz identyfikator skilla",
+    "請輸入有效的 skill ID": "Wpisz prawidłowy identyfikator skilla",
+    "最多可加入 {0} 個 skill": "Można dodać maksymalnie {0} skilli",
+    "暫時無法讀取專案的 skills，仍可手動輸入 skill ID": "Nie można teraz wczytać skilli projektu. Nadal można wpisać identyfikator skilla ręcznie.",
+    "專案尚未啟用 OpenAI 憑證查詢": "Zapytania do OpenAI nie są włączone dla tego projektu",
+    "專案的憑證已失效，請聯絡管理員": "Poświadczenie projektu jest nieważne. Skontaktuj się z administratorem."
   }
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { toolFileId, toolVectorStoreId, type ToolUploadMode } from "./tool-attachments";
+import { toolSkillId } from "./tool-skills";
 
 export type ToolFileAccess = { projectId: string; key: string };
 
@@ -94,4 +95,30 @@ export async function uploadToolFiles(access: ToolFileAccess, files: File[], mod
     await Promise.allSettled(created.map(({ id }) => remove(`files/${id}`)));
     throw error;
   }
+}
+
+export type ProjectSkill = { id: string; name: string; description: string; version: string };
+
+/** Skills the project owns. Capped so a runaway listing cannot stall the editor. */
+export async function listProjectSkills(access: ToolFileAccess): Promise<ProjectSkill[]> {
+  const skills: ProjectSkill[] = [];
+  let after: string | undefined;
+  for (let page = 0; page < 5; page += 1) {
+    const query = new URLSearchParams({ limit: "100", ...(after ? { after } : {}) });
+    const response = await provider(access, `skills?${query}`);
+    const body = await response.json() as { data?: unknown; has_more?: unknown; last_id?: unknown };
+    for (const item of Array.isArray(body.data) ? body.data : []) {
+      const skill = item as { id?: unknown; name?: unknown; description?: unknown; default_version?: unknown };
+      if (typeof skill.id !== "string" || !toolSkillId.test(skill.id)) continue;
+      skills.push({
+        id: skill.id,
+        name: typeof skill.name === "string" ? skill.name : skill.id,
+        description: typeof skill.description === "string" ? skill.description : "",
+        version: typeof skill.default_version === "string" ? skill.default_version : "",
+      });
+    }
+    if (body.has_more !== true || typeof body.last_id !== "string") break;
+    after = body.last_id;
+  }
+  return skills;
 }
