@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n-client";
+import { playEffect } from "@/lib/sfx";
 import type { mountRobotScene, RobotPose } from "./directory-robot-scene";
 import styles from "./directory-robot.module.css";
 
@@ -79,7 +80,11 @@ export function DirectoryRobot() {
           if (event.currentTarget.matches(":focus-visible")) scene.current?.setAttentive(true);
         }}
         onBlur={(event) => scene.current?.setAttentive(event.currentTarget.matches(":hover"))}
-        onClick={() => setInteraction(({ step }) => ({ step: step + 1, active: true }))}
+        data-sound="robot"
+        onClick={() => {
+          playEffect("robot");
+          setInteraction(({ step }) => ({ step: step + 1, active: true }));
+        }}
       >
         <span className={styles.stage} aria-hidden="true" data-model={modelReady ? "3d" : "flat"}>
           <span ref={host} className={styles.model} />

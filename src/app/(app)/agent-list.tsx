@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { App, Button, Empty, Form, Input, Modal, Select, Switch, Table } from "antd";
 import { createAgentAction } from "../actions";
 import { DirectoryRobot } from "./directory-robot";
+import { HomeSound } from "./home-sound";
 import { rememberDirectoryView, restoreDirectoryScroll, takeDirectoryView, type DirectoryContext, type DirectoryView } from "./directory-view";
 
 type Row = {
@@ -190,6 +191,7 @@ export function AgentList({
         )}
       </section>
 
+      <HomeSound />
       <CreateAgentModal open={creating} onClose={() => setCreating(false)} projects={editableProjects} selectedProject={project} />
     </App>
   );

@@ -465,7 +465,15 @@
     "顯示名稱": "Display name",
     "查看": "View",
     "查看 {0}": "View {0}",
-    "機器人名稱": "Robot name"
+    "機器人名稱": "Robot name",
+    "聲音設定": "Sound settings",
+    "背景音樂": "Background music",
+    "按鈕音效": "Button sounds",
+    "音量": "Volume",
+    "背景音樂已關閉": "Background music is off",
+    "上一首": "Previous track",
+    "下一首": "Next track",
+    "鋼琴曲來自 Musopen，公有領域或 CC0。": "Piano pieces from Musopen, public domain or CC0."
   },
   "pl": {
     "Agent 管理": "Zarządzanie agentami",
@@ -933,6 +941,14 @@
     "顯示名稱": "Wyświetlana nazwa",
     "查看": "Pokaż",
     "查看 {0}": "Pokaż {0}",
-    "機器人名稱": "Nazwa robota"
+    "機器人名稱": "Nazwa robota",
+    "聲音設定": "Ustawienia dźwięku",
+    "背景音樂": "Muzyka w tle",
+    "按鈕音效": "Dźwięki przycisków",
+    "音量": "Głośność",
+    "背景音樂已關閉": "Muzyka w tle jest wyłączona",
+    "上一首": "Poprzedni utwór",
+    "下一首": "Następny utwór",
+    "鋼琴曲來自 Musopen，公有領域或 CC0。": "Utwory fortepianowe z Musopen, domena publiczna lub CC0."
   }
 }

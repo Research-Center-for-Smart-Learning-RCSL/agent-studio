@@ -1,0 +1,13 @@
+# Home page music
+
+The Agents page plays three piano pieces in a loop, with a sound panel (the note button at the lower right) that sets the volume, turns the music off, and turns the button sounds off. The choice is kept per browser in `localStorage` under `agent-studio:audio`. Browsers refuse sound until the page has been touched once, so playback starts at the first click or key press.
+
+The recordings are in `public/music/`, converted from the originals to 96 kbps stereo mp3 with metadata removed. All three come from Musopen and carry no attribution requirement.
+
+| File | Piece | Original file | Licence |
+|---|---|---|---|
+| `gymnopedie-1.mp3` | Satie, Gymnopédie No. 1 (Robin Alciatore) | Wikimedia Commons, "Erik Satie - gymnopedies - la 1 ere. lent et douloureux.ogg" | Public domain |
+| `nocturne-op9-no2.mp3` | Chopin, Nocturne Op. 9 No. 2 | Internet Archive item `musopen-chopin`, "Nocturne Op. 9 no. 2 in E flat major.ogg" | CC0 |
+| `nocturne-op55-no2.mp3` | Chopin, Nocturne Op. 55 No. 2 | Internet Archive item `musopen-chopin`, "Nocturne Op. 55 no. 2 in E flat major.ogg" | CC0 |
+
+The effects (button click and robot chirp) are synthesized with the Web Audio API in `src/lib/sfx.ts`, so no audio files or licences are involved.
