@@ -4,16 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { DirectoryRobot } from "./directory-robot";
 
 type Point = { x: number; y: number };
-type Route = { start: Point; stop: Point };
-const jumpMs = 520;
+type Route = { start: Point; stop: Point; outboundBend: number; returnBend: number };
+const jumpMs = 780;
 const turnMs = 520;
 const waveMs = 1850;
+const patrolPatterns = [
+  { centerX: 0.36, centerY: 0.43, bend: 0.8, soloTurn: 0.04 },
+  { centerX: 0.64, centerY: 0.57, bend: 0.2, soloTurn: 0.19 },
+  { centerX: 0.48, centerY: 0.49, bend: 0.56, soloTurn: 0.11 },
+];
 
 function facing(from: Point, to: Point) {
   return Math.atan2(to.x - from.x, to.y - from.y);
 }
 
-function hop(from: Point, to: Point, elapsed: number, jumps: number) {
+function hop(from: Point, to: Point, bend: number, elapsed: number, jumps: number) {
   const step = Math.min(jumps, elapsed / jumpMs);
   const landed = Math.floor(step);
   const beat = step - landed;
@@ -28,26 +33,46 @@ function hop(from: Point, to: Point, elapsed: number, jumps: number) {
   const crouch = beat < takeoff ? Math.sin(Math.PI * beat / takeoff) : 0;
   const cushion = beat > landing ? Math.sin(Math.PI * (beat - landing) / (1 - landing)) : 0;
   const stretch = arc * 0.045 - crouch * 0.095 - cushion * 0.125;
+  const remaining = 1 - progress;
   return {
-    x: from.x + (to.x - from.x) * progress,
+    x: remaining * remaining * from.x + 2 * remaining * progress * bend + progress * progress * to.x,
     y: Math.max(0, from.y + (to.y - from.y) * progress - arc * height),
     scaleX: 1 - stretch * 0.48,
     scaleY: 1 + stretch,
   };
 }
 
-function patrolRoutes(width: number, height: number, button: HTMLButtonElement, paired: boolean): Route[] {
+function patrolRoutes(width: number, height: number, button: HTMLButtonElement, paired: boolean, pattern: typeof patrolPatterns[number]): Route[] {
   const x = Math.max(0, width - button.offsetWidth);
   const y = Math.max(0, height - button.offsetHeight);
   const ceiling = Math.min(10, y);
-  if (!paired) return [{ start: { x: x / 2, y }, stop: { x: x / 2, y: ceiling } }];
+  if (!paired) {
+    const center = x / 2;
+    return [{
+      start: { x: center, y },
+      stop: { x: center, y: Math.max(ceiling, y * pattern.soloTurn) },
+      outboundBend: center,
+      returnBend: center,
+    }];
+  }
 
   // On short viewports, leave room for the pair to meet side by side.
   const tall = y >= button.offsetHeight + 22;
   const separation = tall ? (button.offsetHeight + 22) / 2 : y / 2;
+  const centerY = Math.max(separation, Math.min(y - separation, y * pattern.centerY));
   return [
-    { start: { x: x * 0.06, y }, stop: { x: x * (tall ? 0.29 : 0.14), y: y / 2 + separation } },
-    { start: { x: x * 0.94, y: ceiling }, stop: { x: x * (tall ? 0.71 : 0.86), y: Math.max(ceiling, y / 2 - separation) } },
+    {
+      start: { x: x * 0.06, y },
+      stop: { x: x * (tall ? pattern.centerX - 0.19 : 0.14), y: centerY + separation },
+      outboundBend: x * (tall ? pattern.bend : 0.08),
+      returnBend: x * (tall ? 1 - pattern.bend : 0.18),
+    },
+    {
+      start: { x: x * 0.94, y: ceiling },
+      stop: { x: x * (tall ? pattern.centerX + 0.19 : 0.86), y: Math.max(ceiling, centerY - separation) },
+      outboundBend: x * (tall ? 1 - pattern.bend : 0.92),
+      returnBend: x * (tall ? pattern.bend : 0.82),
+    },
   ];
 }
 
@@ -70,10 +95,11 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
     let previous: number | undefined;
     let phase = "";
     let frame = 0;
+    let patternIndex = 0;
 
     const measure = () => {
       const next = first.offsetWidth
-        ? patrolRoutes(area.clientWidth, area.clientHeight, first, buddy.offsetWidth > 0)
+        ? patrolRoutes(area.clientWidth, area.clientHeight, first, buddy.offsetWidth > 0, patrolPatterns[patternIndex])
         : [];
       if (routes.length !== next.length) elapsed = 0;
       routes = next;
@@ -101,7 +127,14 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
       const paired = routes.length === 2;
       const leg = jumps * jumpMs;
       const pause = paired ? 2 * turnMs + waveMs : turnMs;
-      elapsed = (elapsed + dt) % (2 * leg + pause + turnMs);
+      elapsed += dt;
+      const round = 2 * leg + pause + turnMs;
+      if (elapsed >= round) {
+        elapsed -= round;
+        patternIndex = (patternIndex + 1) % patrolPatterns.length;
+        measure();
+        return;
+      }
       const returning = elapsed >= leg + pause;
       const greeting = paired && elapsed >= leg + turnMs && elapsed < leg + turnMs + waveMs;
       const meeting = paired && elapsed >= leg && elapsed < leg + turnMs + waveMs;
@@ -118,10 +151,10 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
           }),
         });
       }
-      routes.forEach(({ start, stop }, index) => {
+      routes.forEach(({ start, stop, outboundBend, returnBend }, index) => {
         const position = returning
-          ? hop(stop, start, elapsed - leg - pause, jumps)
-          : hop(start, stop, elapsed, jumps);
+          ? hop(stop, start, returnBend, elapsed - leg - pause, jumps)
+          : hop(start, stop, outboundBend, elapsed, jumps);
         buttons[index].style.setProperty("--robot-position", `${position.x.toFixed(2)}px ${position.y.toFixed(2)}px`);
         buttons[index].style.setProperty("--robot-hop-scale", `${position.scaleX.toFixed(3)} ${position.scaleY.toFixed(3)}`);
       });
