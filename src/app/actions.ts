@@ -15,7 +15,7 @@ import {
   setArchived,
   updateAgentMeta,
 } from "@/lib/agents";
-import { ForbiddenError, requireAdmin, requireProjectRole } from "@/lib/authz";
+import { can, ForbiddenError, requireAdmin, requireProjectRole, requireUser } from "@/lib/authz";
 import { mcpServerUrl, validMcpCredentialField } from "@/lib/mcp-credentials";
 import { sanitizeTools, toRuntimeMessages } from "@/lib/openai-shape";
 import { syncFromRcsl } from "@/lib/rcsl";
@@ -47,8 +47,6 @@ const versionSchema = z.object({
   settings: agentSettingsSchema,
   note: z.string().max(500).optional(),
 });
-
-export type VersionPayload = z.infer<typeof versionSchema>;
 
 async function validateVersion(projectId: string, input: unknown) {
   const parsed = versionSchema.parse(input);
@@ -114,21 +112,39 @@ export async function setArchivedAction(agentId: string, archived: boolean) {
   });
 }
 
-export async function createAgentAction(projectId: string, name: string, copyFrom?: { agentId: string; version: VersionPayload }) {
+export async function createAgentAction(projectId: string, name: string) {
   return run(async () => {
     const user = await requireProjectRole(projectId, "editor");
-    const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
-    if (!project) throw new Error("專案不存在");
-    if (!project.active) throw new Error("專案已停用");
-    const initial = await validateVersion(projectId, copyFrom?.version ?? {
+    const initial = await validateVersion(projectId, {
       model: await mostUsedModel(),
       instructions: [{ role: "developer", content: "" }],
       tools: [],
       settings: {},
     });
-    const id = await createAgent(projectId, z.string().trim().min(1).parse(name), user.email, {
-      ...initial,
-      note: copyFrom ? `複製自 ${copyFrom.agentId}` : "",
+    const id = await createAgent(projectId, z.string().trim().min(1).parse(name), user.email, initial);
+    revalidatePath("/");
+    return id;
+  });
+}
+
+export async function copyAgentAction(agentId: string, version: number, targetProjectId?: string) {
+  return run(async () => {
+    const user = await requireUser();
+    const source = await getAgent(z.string().min(1).parse(agentId));
+    if (!source || !can(user, source.agent.projectId, "viewer")) throw new ForbiddenError();
+    const projectId = z.string().min(1).optional().parse(targetProjectId) ?? source.agent.projectId;
+    if (!can(user, projectId, "editor")) throw new ForbiddenError();
+
+    const selected = await getVersion(agentId, z.number().int().min(1).max(2_147_483_647).parse(version));
+    if (!selected) throw new Error("來源版本不存在");
+    const initial = await validateVersion(projectId, {
+      ...selected,
+      note: `複製自 ${agentId}`,
+    });
+    const id = await createAgent(projectId, source.agent.name, user.email, initial, {
+      id: agentId,
+      version: selected.version,
+      description: source.agent.description,
     });
     revalidatePath("/");
     return id;

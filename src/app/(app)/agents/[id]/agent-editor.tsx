@@ -9,7 +9,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Editor from "@monaco-editor/react";
-import { CloudUploadOutlined, DiffOutlined, FileTextOutlined, FullscreenOutlined } from "@ant-design/icons";
+import { CloudUploadOutlined, CopyOutlined, DiffOutlined, FileTextOutlined, FullscreenOutlined } from "@ant-design/icons";
 import {
   Alert,
   App,
@@ -34,7 +34,7 @@ import {
 import type { AgentSettings, InstructionMessage } from "@/db/schema";
 import { attachmentNames, maxToolFiles, maxToolUploadBytes, maxToolUploadCount, readToolJson, toolAttachments, toolFileId, toolVectorStoreId, withAttachmentNames, type ToolUploadAttachment } from "@/lib/tool-attachments";
 import { maxToolSkills, toolSkillId, toolSkills } from "@/lib/tool-skills";
-import { publishVersionAction, saveVersionAction, setArchivedAction, updateAgentMetaAction } from "../../../actions";
+import { copyAgentAction, publishVersionAction, saveVersionAction, setArchivedAction, updateAgentMetaAction } from "../../../actions";
 
 export type ToolTemplate = { key: string; tool: Record<string, unknown> };
 
@@ -68,6 +68,7 @@ export function AgentEditor(props: {
     id: string;
     name: string;
     description: string;
+    projectId: string;
     projectName: string;
     organizationName: string;
     publishedVersion: number | null;
@@ -76,6 +77,7 @@ export function AgentEditor(props: {
   versions: VersionMeta[];
   selected: (Draft & { version: number }) | null;
   canEdit: boolean;
+  copyProjects: { id: string; name: string; organizationName: string }[];
   toolTemplates: ToolTemplate[];
   modelSuggestions: string[];
   canUploadToolFiles: boolean;
@@ -210,7 +212,14 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
   return (
     <Row ref={editorPageRef} gutter={24} className={`agent-editor-page${readOnly ? " is-readonly" : ""}${!dirty ? " is-clean" : ""}`}>
       <Col xs={24} lg={17} className={`agent-editor-settings-col${activeTab === "instructions" ? " is-instructions-active" : ""}`}>
-        <Header agent={props.agent} canEdit={props.canEdit} userEmail={props.userEmail} />
+        <Header
+          agent={props.agent}
+          canEdit={props.canEdit}
+          userEmail={props.userEmail}
+          copyProjects={props.copyProjects}
+          version={props.selected?.version}
+          dirty={dirty}
+        />
         {readOnly && <Alert style={{ marginBottom: 16 }} type="info" title={t("你對這個專案只有檢視權限。")} />}
         {viewingOld && (
           <Alert
@@ -288,11 +297,15 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
   );
 }
 
-function Header(props: { agent: Parameters<typeof AgentEditor>[0]["agent"]; canEdit: boolean; userEmail: string }) {
+function Header(props: Pick<Parameters<typeof AgentEditor>[0], "agent" | "canEdit" | "userEmail" | "copyProjects"> & {
+  version: number | undefined;
+  dirty: boolean;
+}) {
   const { t, error } = useI18n();
   const router = useRouter();
   const { message } = App.useApp();
   const [editing, setEditing] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [form] = Form.useForm<{ name: string; description: string }>();
 
   return (
@@ -323,18 +336,23 @@ function Header(props: { agent: Parameters<typeof AgentEditor>[0]["agent"]; canE
           {props.agent.archived && <Tag>{t("已封存")}</Tag>}
         </Space>
         <DirectoryRobot size="compact" variant="editor" />
-        {props.canEdit && (
+        {(props.canEdit || props.copyProjects.length > 0) && (
           <Dropdown
             menu={{
               items: [
-                { key: "meta", label: t("修改名稱與說明") },
-                { key: "archive", label: props.agent.archived ? t("取消封存") : t("封存（學生端不再列出）"), danger: !props.agent.archived },
+                ...(props.copyProjects.length ? [{ key: "copy", label: t("複製 Agent"), icon: <CopyOutlined /> }] : []),
+                ...(props.canEdit ? [
+                  { key: "meta", label: t("修改名稱與說明") },
+                  { key: "archive", label: props.agent.archived ? t("取消封存") : t("封存（學生端不再列出）"), danger: !props.agent.archived },
+                ] : []),
               ],
               onClick: async ({ key }) => {
                 if (key === "meta") {
                   form.setFieldsValue({ name: props.agent.name, description: props.agent.description });
                   setEditing(true);
-                } else {
+                } else if (key === "copy") {
+                  setCopying(true);
+                } else if (key === "archive") {
                   const r = await setArchivedAction(props.agent.id, !props.agent.archived);
                   if (!r.ok) message.error(error(r.error));
                   router.refresh();
@@ -350,6 +368,15 @@ function Header(props: { agent: Parameters<typeof AgentEditor>[0]["agent"]; canE
         {props.agent.id}
       </Typography.Text>
       {props.agent.description && <Typography.Paragraph style={{ marginTop: 8 }}>{props.agent.description}</Typography.Paragraph>}
+      {copying && props.version !== undefined && (
+        <CopyAgentModal
+          agent={props.agent}
+          version={props.version}
+          projects={props.copyProjects}
+          dirty={props.dirty}
+          onClose={() => setCopying(false)}
+        />
+      )}
       <Modal
         title={t("名稱與說明")}
         open={editing}
@@ -372,6 +399,73 @@ function Header(props: { agent: Parameters<typeof AgentEditor>[0]["agent"]; canE
         </Form>
       </Modal>
     </div>
+  );
+}
+
+function CopyAgentModal(props: {
+  agent: Parameters<typeof AgentEditor>[0]["agent"];
+  version: number;
+  projects: Parameters<typeof AgentEditor>[0]["copyProjects"];
+  dirty: boolean;
+  onClose: () => void;
+}) {
+  const { t, error } = useI18n();
+  const { message } = App.useApp();
+  const router = useRouter();
+  const [target, setTarget] = useState(() => props.projects.find((project) => project.id === props.agent.projectId)?.id);
+  const [pending, setPending] = useState(false);
+
+  return (
+    <Modal
+      open
+      title={t("複製 Agent")}
+      okText={t("複製")}
+      cancelText={t("取消")}
+      confirmLoading={pending}
+      closable={!pending}
+      keyboard={!pending}
+      cancelButtonProps={{ disabled: pending }}
+      okButtonProps={{ disabled: !target }}
+      onCancel={() => { if (!pending) props.onClose(); }}
+      onOk={async () => {
+        if (!target || pending) return;
+        setPending(true);
+        try {
+          const result = await copyAgentAction(props.agent.id, props.version, target === props.agent.projectId ? undefined : target);
+          if (!result.ok) {
+            message.error(error(result.error));
+            return;
+          }
+          message.success(t("已複製 Agent"));
+          props.onClose();
+          router.push(`/agents/${result.data}`);
+        } catch {
+          message.error(t("無法複製 Agent"));
+        } finally {
+          setPending(false);
+        }
+      }}
+    >
+      <Typography.Paragraph>{t("將已儲存的 v{0} 複製為新 Agent 的 v1。", [props.version])}</Typography.Paragraph>
+      <Form layout="vertical">
+        <Form.Item label={t("目的專案")} htmlFor="copy-agent-project">
+          <Select
+            id="copy-agent-project"
+            value={target}
+            onChange={setTarget}
+            disabled={pending}
+            options={props.projects.map((project) => ({
+              value: project.id,
+              label: `${project.organizationName} / ${project.name}`,
+            }))}
+          />
+        </Form.Item>
+      </Form>
+      {target && target !== props.agent.projectId && (
+        <Typography.Paragraph type="secondary">{t("跨專案複製後，可能需要重新綁定 OpenAI 檔案、向量儲存庫或 Skills。")}</Typography.Paragraph>
+      )}
+      {props.dirty && <Alert type="warning" showIcon message={t("複製成功後會切換到新 Agent，離開時將捨棄未儲存的修改。")} />}
+    </Modal>
   );
 }
 

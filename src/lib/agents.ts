@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
+import { agentCopyName } from "@/lib/agent-copy-name";
 import {
   agents,
   agentVersions,
@@ -101,12 +102,35 @@ export async function getEffectiveVersion(agentId: string) {
   return getVersion(agentId, version);
 }
 
-export async function createAgent(projectId: string, name: string, actor: string, initial: VersionInput) {
+export async function createAgent(
+  projectId: string,
+  sourceName: string,
+  actor: string,
+  initial: VersionInput,
+  copyOf?: { id: string; version: number; description: string },
+) {
   const id = `agt_${randomBytes(16).toString("hex")}`;
   await db.transaction(async (tx) => {
-    await tx.insert(agents).values({ id, projectId, name, publishedVersion: 1 });
+    // Serialize name allocation for copies into the same project.
+    const [project] = await tx.select({ active: projects.active }).from(projects)
+      .where(eq(projects.id, projectId)).for("update");
+    if (!project) throw new Error("專案不存在");
+    if (!project.active) throw new Error("專案已停用");
+
+    let name = sourceName;
+    if (copyOf) {
+      const existing = await tx.select({ name: agents.name }).from(agents).where(eq(agents.projectId, projectId));
+      name = agentCopyName(sourceName, existing.map((agent) => agent.name));
+    }
+    await tx.insert(agents).values({ id, projectId, name, description: copyOf?.description, publishedVersion: 1 });
     await tx.insert(agentVersions).values({ agentId: id, version: 1, ...initial, note: initial.note ?? "", createdBy: actor });
-    await tx.insert(auditEvents).values({ actor, action: "agent.create", targetType: "agent", targetId: id, detail: { projectId, name } });
+    await tx.insert(auditEvents).values({
+      actor,
+      action: copyOf ? "agent.copy" : "agent.create",
+      targetType: "agent",
+      targetId: id,
+      detail: { projectId, name, ...(copyOf && { sourceAgentId: copyOf.id, sourceVersion: copyOf.version }) },
+    });
   });
   return id;
 }
@@ -158,6 +182,15 @@ export async function publishVersion(agentId: string, version: number, actor: st
 
 export async function updateAgentMeta(agentId: string, meta: { name?: string; description?: string }, actor: string) {
   await db.transaction(async (tx) => {
+    if (meta.name !== undefined) {
+      // Name changes and copies into this project must observe each other in order.
+      await tx.execute(sql`
+        select p.id from projects p
+        join agents a on a.project_id = p.id
+        where a.id = ${agentId}
+        for update of p
+      `);
+    }
     await tx.update(agents).set({ ...meta, updatedAt: new Date() }).where(eq(agents.id, agentId));
     await tx.insert(auditEvents).values({ actor, action: "agent.update", targetType: "agent", targetId: agentId, detail: meta });
   });

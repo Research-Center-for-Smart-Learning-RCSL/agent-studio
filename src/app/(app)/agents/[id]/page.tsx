@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
+import { organizations, projects } from "@/db/schema";
 import { getAgent, getVersion, listVersions } from "@/lib/agents";
 import { can, requireUser } from "@/lib/authz";
 import { toolFileAvailable } from "@/lib/tool-file-credentials";
@@ -35,6 +36,15 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
     select model from agent_versions group by model order by count(*) desc limit 30`);
 
   const canEdit = can(user, found.agent.projectId, "editor");
+  const editableProjectIds = [...user.projectRoles.keys()].filter((projectId) => can(user, projectId, "editor"));
+  const copyProjects = selected && (user.isAdmin || editableProjectIds.length > 0)
+    ? await db.select({ id: projects.id, name: projects.name, organizationName: organizations.name })
+      .from(projects)
+      .innerJoin(organizations, eq(organizations.id, projects.organizationId))
+      .where(and(eq(projects.active, true), user.isAdmin ? undefined : inArray(projects.id, editableProjectIds)))
+      .orderBy(asc(organizations.name), asc(projects.name), asc(projects.id))
+    : [];
+
   return (
     <AgentEditor
       key={`${id}@${selected?.version ?? 0}`}
@@ -43,6 +53,7 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
         id: found.agent.id,
         name: found.agent.name,
         description: found.agent.description,
+        projectId: found.agent.projectId,
         projectName: found.projectName,
         organizationName: found.organizationName,
         publishedVersion: found.agent.publishedVersion,
@@ -61,6 +72,7 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
           : null
       }
       canEdit={canEdit}
+      copyProjects={copyProjects}
       canUploadToolFiles={canEdit && !found.agent.archivedAt && found.projectActive && (await toolFileAvailable(found.agent.projectId))}
       toolTemplates={templates.rows.map((r) => ({ key: r.key, tool: r.tool })) satisfies ToolTemplate[]}
       modelSuggestions={models.rows.map((r) => r.model)}
