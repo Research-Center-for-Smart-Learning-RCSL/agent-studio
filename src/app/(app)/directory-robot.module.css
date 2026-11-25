@@ -61,6 +61,11 @@
   translate: var(--robot-position, calc(var(--patrol-x) * .94) 0px);
 }
 
+.mascot[data-sidebar-robot] .stage {
+  scale: var(--robot-hop-scale, 1);
+  transform-origin: 50% 88%;
+}
+
 .mascot[data-sidebar-robot] .robot {
   transform: perspective(12em) rotateY(var(--robot-facing, 0rad));
   transform-style: preserve-3d;
@@ -366,6 +371,7 @@
   }
 
   .mascot[data-sidebar-robot] .robot { transform: none; transition: none; }
+  .mascot[data-sidebar-robot] .stage { scale: 1; }
 
   .mascot[data-robot-variant="sidebar-buddy"] .button {
     translate: calc(var(--patrol-x) * .75) calc(var(--patrol-y) * .5);

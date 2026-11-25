@@ -5,7 +5,7 @@ import { DirectoryRobot } from "./directory-robot";
 
 type Point = { x: number; y: number };
 type Route = { start: Point; stop: Point };
-const jumpMs = 560;
+const jumpMs = 520;
 const turnMs = 520;
 const waveMs = 1850;
 
@@ -13,14 +13,26 @@ function facing(from: Point, to: Point) {
   return Math.atan2(to.x - from.x, to.y - from.y);
 }
 
-function hop(from: Point, to: Point, elapsed: number, jumps: number): Point {
+function hop(from: Point, to: Point, elapsed: number, jumps: number) {
   const step = Math.min(jumps, elapsed / jumpMs);
   const landed = Math.floor(step);
-  const flight = Math.max(0, Math.min(1, (step - landed - 0.18) / 0.64));
-  const progress = (landed + flight) / jumps;
+  const beat = step - landed;
+  const takeoff = 0.15;
+  const landing = 0.82;
+  const flight = Math.max(0, Math.min(1, (beat - takeoff) / (landing - takeoff)));
+  const travel = flight * flight * (3 - 2 * flight);
+  const progress = (landed + travel) / jumps;
+  const arc = Math.sin(Math.PI * flight) ** 1.3;
+  const stride = Math.hypot(to.x - from.x, to.y - from.y) / jumps;
+  const height = Math.min(16, 7 + stride * 0.2);
+  const crouch = beat < takeoff ? Math.sin(Math.PI * beat / takeoff) : 0;
+  const cushion = beat > landing ? Math.sin(Math.PI * (beat - landing) / (1 - landing)) : 0;
+  const stretch = arc * 0.045 - crouch * 0.095 - cushion * 0.125;
   return {
     x: from.x + (to.x - from.x) * progress,
-    y: Math.max(0, from.y + (to.y - from.y) * progress - Math.sin(flight * Math.PI) * 9),
+    y: Math.max(0, from.y + (to.y - from.y) * progress - arc * height),
+    scaleX: 1 - stretch * 0.48,
+    scaleY: 1 + stretch,
   };
 }
 
@@ -77,7 +89,10 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
       if (reducedMotion.matches) {
         if (phase !== "reduced") {
           phase = "reduced";
-          buttons.forEach((button) => button.style.removeProperty("--robot-position"));
+          for (const button of buttons) {
+            button.style.removeProperty("--robot-position");
+            button.style.removeProperty("--robot-hop-scale");
+          }
           setPose({ greeting: false, angles: [0, 0] });
         }
         return;
@@ -108,6 +123,7 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
           ? hop(stop, start, elapsed - leg - pause, jumps)
           : hop(start, stop, elapsed, jumps);
         buttons[index].style.setProperty("--robot-position", `${position.x.toFixed(2)}px ${position.y.toFixed(2)}px`);
+        buttons[index].style.setProperty("--robot-hop-scale", `${position.scaleX.toFixed(3)} ${position.scaleY.toFixed(3)}`);
       });
     };
 
