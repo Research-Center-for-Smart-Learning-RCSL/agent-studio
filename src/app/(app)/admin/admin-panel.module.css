@@ -4,9 +4,16 @@
 
 .title {
   margin: 0;
-  margin-inline-end: clamp(12px, 2vw, 24px);
   font-size: clamp(19px, 2.2vw, 26px);
   line-height: 1.2;
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding-inline: 4px;
 }
 
 .page :global(.ant-tabs-nav) {

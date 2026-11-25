@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n-client";
 import { playEffect } from "@/lib/sfx";
+import { robotAntennas, type RobotVariant } from "./directory-robot-antennas";
 import type { mountRobotScene, RobotPose } from "./directory-robot-scene";
 import styles from "./directory-robot.module.css";
 
@@ -12,10 +13,13 @@ const reactions = [
   { pose: "heart", message: "送你一顆愛心。" },
 ] as const;
 
-export function DirectoryRobot() {
+export function DirectoryRobot({ size = "default", variant = "directory" }: {
+  size?: "default" | "compact";
+  variant?: RobotVariant;
+}) {
   const { t } = useI18n();
   const [interaction, setInteraction] = useState({ step: -1, active: false });
-  const [modelReady, setModelReady] = useState(false);
+  const [modelVariant, setModelVariant] = useState<RobotVariant | null>(null);
   const host = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const scene = useRef<ReturnType<typeof mountRobotScene>>(null);
@@ -23,6 +27,8 @@ export function DirectoryRobot() {
   const reaction = interaction.active ? reactions[interaction.step % reactions.length] : null;
   const pose = reaction?.pose ?? "idle";
   const label = t("跟小機器人打招呼");
+  const antennas = robotAntennas[variant];
+  const modelReady = modelVariant === variant;
 
   useEffect(() => {
     const container = host.current;
@@ -34,14 +40,14 @@ export function DirectoryRobot() {
     };
     void import("./directory-robot-scene").then(({ mountRobotScene }) => {
       if (cancelled) return;
-      scene.current = mountRobotScene(container, () => {
+      scene.current = mountRobotScene(container, variant, () => {
         clearScene();
-        setModelReady(false);
+        setModelVariant(null);
       });
       if (!scene.current) return;
       scene.current.setPose(latestPose.current);
       scene.current.setAttentive(button.current?.matches(":hover, :focus-visible") ?? false);
-      setModelReady(true);
+      setModelVariant(variant);
     }).catch(() => {
       if (!cancelled) clearScene();
     });
@@ -49,7 +55,7 @@ export function DirectoryRobot() {
       cancelled = true;
       clearScene();
     };
-  }, []);
+  }, [variant]);
 
   useEffect(() => {
     latestPose.current = pose;
@@ -65,7 +71,7 @@ export function DirectoryRobot() {
   }, [interaction]);
 
   return (
-    <div className={styles.mascot} data-pose={pose}>
+    <div className={styles.mascot} data-pose={pose} data-size={size}>
       <button
         ref={button}
         className={styles.button}
@@ -96,7 +102,13 @@ export function DirectoryRobot() {
                 <span className={styles.armRight} />
                 <span className={styles.body}><span /></span>
                 <span className={styles.head}>
-                  <span className={styles.antenna} />
+                  {antennas.map(({ offset, tip }) => (
+                    <span
+                      key={offset}
+                      className={styles.antenna}
+                      style={{ left: `calc(50% + ${offset * 0.62}em - .07em)`, color: tip }}
+                    />
+                  ))}
                   <span className={styles.face}>
                     <span className={styles.eyes}><span /><span /></span>
                     <span className={styles.smile} />

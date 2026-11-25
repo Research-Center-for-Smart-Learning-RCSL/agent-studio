@@ -19,6 +19,7 @@ import {
   WebGLRenderer,
   type BufferGeometry,
 } from "three";
+import { robotAntennas, type RobotVariant } from "./directory-robot-antennas";
 
 export type RobotPose = "idle" | "wave" | "happy" | "heart";
 
@@ -86,7 +87,7 @@ function createFaceGeometry(halfWidth: number, halfHeight: number, depth: number
   }).translate(0, 0, -depth / 2);
 }
 
-function createRobot() {
+function createRobot(variant: RobotVariant) {
   const root = new Group();
   const head = new Group();
   const torso = new Group();
@@ -107,8 +108,13 @@ function createRobot() {
 
   add(head, createFaceGeometry(0.607, 0.365, 0.502, 0.093), shell, 0, 0, 0);
   add(head, createFaceGeometry(0.525, 0.282, 0.11, 0.057), visor, 0, 0, 0.3);
-  add(head, new CapsuleGeometry(0.026, 0.16, 5, 10), trim, 0, 0.52, 0);
-  add(head, sphere, mint, 0, 0.64, 0).scale.setScalar(0.087);
+  const antennaStem = new CapsuleGeometry(0.026, 0.16, 5, 10);
+  for (const { offset, tip } of robotAntennas[variant]) {
+    const x = offset * 0.26;
+    const antennaTip = new MeshStandardMaterial({ color: tip, roughness: 0.44 });
+    add(head, antennaStem, trim, x, 0.52, 0);
+    add(head, sphere, antennaTip, x, 0.64, 0).scale.setScalar(0.087);
+  }
   head.position.y = headRest;
   root.add(head);
 
@@ -156,7 +162,7 @@ function createHeart() {
   );
 }
 
-export function mountRobotScene(host: HTMLElement, onContextLost: () => void) {
+export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onContextLost: () => void) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("webgl2", { alpha: true, antialias: true, powerPreference: "low-power" });
   if (!context) return null;
@@ -174,7 +180,7 @@ export function mountRobotScene(host: HTMLElement, onContextLost: () => void) {
   rim.position.set(3, 2, -3);
   scene.add(rim);
 
-  const { root, torso, head, eyes, arms } = createRobot();
+  const { root, torso, head, eyes, arms } = createRobot(variant);
   const heart = createHeart();
   heart.visible = false;
   scene.add(root, heart);

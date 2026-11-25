@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Alert, App, Button, Card, Form, Input, Popconfirm, Radio, Select, Space, Switch, Table, Tabs, Tag, Typography } from "antd";
 import type { SecretGrant } from "@/db/schema";
 import styles from "./admin-panel.module.css";
+import { DirectoryRobot } from "../directory-robot";
 import {
   addMembershipAction,
   deleteSecretAction,
@@ -37,10 +38,13 @@ export function AdminPanel(props: Props) {
   const { t } = useI18n();
   return (
     <App className={styles.page}>
+      <div className={styles.masthead}>
+        <h1 className={styles.title}>{t("管理")}</h1>
+        <DirectoryRobot size="compact" variant="admin" />
+      </div>
       <Tabs
         size="small"
         tabBarGutter={16}
-        tabBarExtraContent={{ left: <h1 className={styles.title}>{t("管理")}</h1> }}
         items={[
           { key: "members", label: t("成員與權限"), children: <Members {...props} /> },
           { key: "secrets", label: t("憑證"), children: <Secrets {...props} /> },

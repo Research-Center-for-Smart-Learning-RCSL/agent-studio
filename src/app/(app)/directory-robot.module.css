@@ -16,7 +16,7 @@
 }
 
 .button:focus-visible {
-  outline: 2px solid #e3f3f5;
+  outline: 2px solid var(--robot-focus-color, #e3f3f5);
   outline-offset: 3px;
 }
 
@@ -27,6 +27,14 @@
   height: 5.25em;
   font-size: clamp(13px, 2.3vw, 17px);
 }
+
+.mascot[data-size="compact"] .stage {
+  width: var(--robot-compact-width, 68px);
+  height: var(--robot-compact-height, 58px);
+  font-size: var(--robot-compact-font-size, 11px);
+}
+
+.mascot[data-size="compact"] .button:focus-visible { outline-color: var(--studio-accent); }
 
 .stage span { box-sizing: border-box; }
 
@@ -135,7 +143,6 @@
 
 .antenna {
   bottom: 100%;
-  left: calc(50% - .07em);
   width: .14em;
   height: .46em;
   background: #9eb9cb;
@@ -148,8 +155,8 @@
   width: .48em;
   height: .48em;
   border-radius: 50%;
-  background: #b5d9cb;
-  box-shadow: 0 0 .45em #b5d9cb60;
+  background: currentColor;
+  box-shadow: 0 0 .45em color-mix(in srgb, currentColor 35%, transparent);
   content: "";
 }
 
@@ -216,6 +223,10 @@
 }
 
 .bubble:empty { clip-path: inset(50%); }
+
+.mascot[data-size="compact"] .bubble {
+  inset-inline: var(--robot-bubble-start, auto) var(--robot-bubble-end, 0);
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .head {

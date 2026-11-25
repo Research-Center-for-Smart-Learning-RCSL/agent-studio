@@ -584,6 +584,9 @@ a {
 .agent-editor-page.is-readonly, .agent-editor-page.is-clean { padding-bottom: 0; }
 .agent-editor-page { margin-top: -24px; }
 .agent-editor-heading { margin-bottom: 8px; }
+.agent-editor-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.agent-editor-title-copy { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+.agent-editor-title-copy .ant-typography { overflow-wrap: anywhere; }
 .agent-editor-settings-card > .ant-card-body { padding: 8px 16px 12px !important; }
 .agent-editor-settings-card .ant-tabs-nav { margin-bottom: 8px !important; }
 .agent-editor-settings-col.is-instructions-active { display: flex; flex-direction: column; min-height: 0; }
@@ -764,6 +767,16 @@ a {
 }
 
 .studio-nav { display: flex; flex-direction: column; gap: 4px; }
+.studio-sidebar-mascot { display: flex; justify-content: center; margin-top: auto; }
+@media (min-width: 861px) {
+  .studio-sidebar.is-collapsed .studio-sidebar-mascot {
+    --robot-compact-width: 44px;
+    --robot-compact-height: 44px;
+    --robot-compact-font-size: 8px;
+    --robot-bubble-start: 0;
+    --robot-bubble-end: auto;
+  }
+}
 .studio-nav a,
 .studio-collapse {
   display: flex;
@@ -792,6 +805,7 @@ a {
 }
 .studio-nav-icon { display: inline-grid; flex: none; place-items: center; width: 20px; font-size: 18px; }
 .studio-collapse { margin-top: auto; }
+.studio-sidebar-mascot + .studio-collapse { margin-top: 0; }
 
 .studio-sidebar.is-collapsed .studio-nav-label,
 .studio-sidebar.is-collapsed .studio-brand-name { display: none; }
@@ -812,6 +826,7 @@ a {
     transition: transform 0.18s ease;
   }
   .studio-sidebar.is-open { transform: none; box-shadow: 0 0 32px #25354433; }
+  .studio-sidebar:not(.is-open) .studio-sidebar-mascot { visibility: hidden; }
   /* The collapsed state belongs to the desktop rail; the phone menu always shows labels. */
   .studio-sidebar.is-collapsed { width: 232px; }
   .studio-sidebar.is-collapsed .studio-nav-label,

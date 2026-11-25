@@ -1,6 +1,7 @@
 "use client";
 import { runtimeFunctionNames, runtimeFunctions } from "@/lib/runtime-functions";
 import { useI18n } from "@/lib/i18n-client";
+import { DirectoryRobot } from "../../directory-robot";
 import { readDirectoryView } from "../../directory-view";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -313,14 +314,15 @@ function Header(props: { agent: Parameters<typeof AgentEditor>[0]["agent"]; canE
         </Link>
         <Typography.Text type="secondary">{props.agent.organizationName} / {props.agent.projectName}</Typography.Text>
       </Space>
-      <Space align="center" style={{ display: "flex", justifyContent: "space-between" }}>
-        <Space align="center">
+      <div className="agent-editor-title-row">
+        <Space align="center" className="agent-editor-title-copy">
           <Typography.Title level={3} style={{ margin: 0 }}>
             {props.agent.name}
           </Typography.Title>
           {props.canEdit && <Button type="text" aria-label={t("編輯名稱與說明")} title={t("編輯名稱與說明")} onClick={() => { form.setFieldsValue({ name: props.agent.name, description: props.agent.description }); setEditing(true); }}>✎</Button>}
           {props.agent.archived && <Tag>{t("已封存")}</Tag>}
         </Space>
+        <DirectoryRobot size="compact" variant="editor" />
         {props.canEdit && (
           <Dropdown
             menu={{
@@ -343,7 +345,7 @@ function Header(props: { agent: Parameters<typeof AgentEditor>[0]["agent"]; canE
             <Button>{t("更多")}</Button>
           </Dropdown>
         )}
-      </Space>
+      </div>
       <Typography.Text copyable type="secondary" style={{ fontSize: 12 }}>
         {props.agent.id}
       </Typography.Text>
