@@ -19,7 +19,7 @@ import {
   WebGLRenderer,
   type BufferGeometry,
 } from "three";
-import { robotVariants, type RobotVariant } from "./directory-robot-variants";
+import { isSidebarRobot, robotVariants, type RobotVariant } from "./directory-robot-variants";
 
 export type RobotPose = "idle" | "wave" | "happy" | "heart";
 
@@ -304,7 +304,7 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
     camera.left = -halfWidth;
     camera.right = halfWidth;
     camera.updateProjectionMatrix();
-    travelRange = variant === "sidebar" ? 0 : Math.max(0, halfWidth - 0.98);
+    travelRange = isSidebarRobot(variant) ? 0 : Math.max(0, halfWidth - 0.98);
     root.position.x = MathUtils.clamp(root.position.x, -travelRange, travelRange);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height, false);

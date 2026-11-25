@@ -39,30 +39,39 @@
 
 .mascot[data-size="compact"] .button:focus-visible { outline-color: var(--studio-accent); }
 
-.mascot[data-robot-variant="sidebar"] {
+.mascot[data-sidebar-robot] {
   container: sidebar-robot / size;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-.mascot[data-robot-variant="sidebar"] .button {
+.mascot[data-sidebar-robot] .button {
   --patrol-x: max(0px, calc(100cqi - var(--robot-compact-width, 62px)));
   --patrol-y: max(0px, calc(100cqb - var(--robot-compact-height, 58px)));
   position: absolute;
   top: 0;
   left: 0;
   width: var(--robot-compact-width, 62px);
+  pointer-events: auto;
   animation: sidebarPatrol 24s linear infinite;
   animation-play-state: paused;
 }
 
-.mascot[data-robot-variant="sidebar"][data-pose="idle"] .button { animation-play-state: running; }
-.mascot[data-robot-variant="sidebar"][data-pose="idle"] .button:focus-visible { animation-play-state: paused; }
+.mascot[data-robot-variant="sidebar-buddy"] .button {
+  animation-direction: reverse;
+  animation-delay: -12s;
+}
+
+.mascot[data-sidebar-robot][data-pose="idle"] .button { animation-play-state: running; }
+.mascot[data-sidebar-robot][data-pose="idle"] .button:focus-visible { animation-play-state: paused; }
 
 @media (hover: hover) {
-  .mascot[data-robot-variant="sidebar"][data-pose="idle"] .button:hover { animation-play-state: paused; }
+  .mascot[data-sidebar-robot][data-pose="idle"] .button:hover { animation-play-state: paused; }
 }
 
 @container sidebar-robot (height < 58px) {
-  .mascot[data-robot-variant="sidebar"] :is(.button, .bubble) { display: none; }
+  .mascot[data-sidebar-robot] :is(.button, .bubble) { display: none; }
 }
 
 @keyframes sidebarPatrol {
@@ -289,7 +298,7 @@
 
 .mascot .flatArt { animation: hopPath 15s linear infinite paused; }
 .mascot[data-pose="idle"] .flatArt { animation-play-state: running; }
-.mascot[data-robot-variant="sidebar"] .flatArt { animation: none; }
+.mascot[data-sidebar-robot] .flatArt { animation: none; }
 .mascot[data-pose="idle"] .robot { animation: hopPose 15s ease-in-out infinite; }
 .mascot[data-pose="idle"] .eyes > span { animation: blink 14s ease-in-out infinite; }
 .mascot[data-pose="idle"] .antenna { animation: antennaWiggle 14s ease-in-out infinite; }
@@ -359,8 +368,12 @@
     animation: none;
   }
 
-  .mascot[data-robot-variant="sidebar"] .button {
+  .mascot[data-sidebar-robot] .button {
     animation: none;
-    translate: calc(var(--patrol-x) * .5) calc(var(--patrol-y) * .5);
+    translate: calc(var(--patrol-x) * .25) calc(var(--patrol-y) * .5);
+  }
+
+  .mascot[data-robot-variant="sidebar-buddy"] .button {
+    translate: calc(var(--patrol-x) * .75) calc(var(--patrol-y) * .5);
   }
 }

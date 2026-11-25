@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppstoreOutlined, FileSearchOutlined, MenuFoldOutlined, MenuOutlined, MenuUnfoldOutlined, SettingOutlined } from "@ant-design/icons";
 import { useI18n } from "@/lib/i18n-client";
-import { DirectoryRobot } from "./directory-robot";
+import { SidebarRobots } from "./sidebar-robots";
 
 export type SidebarKey = "agents" | "logs" | "admin";
 
@@ -94,9 +94,7 @@ export function AppSidebar({ items }: { items: { key: SidebarKey; label: string 
             </Link>
           ))}
         </nav>
-        <div className="studio-sidebar-mascot">
-          <DirectoryRobot size="compact" variant="sidebar" />
-        </div>
+        <SidebarRobots />
         <button
           type="button"
           className="studio-collapse"

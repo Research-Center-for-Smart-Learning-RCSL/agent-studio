@@ -776,8 +776,9 @@ a {
 }
 
 .studio-nav { display: flex; flex-direction: column; gap: 4px; }
-.studio-sidebar-mascot { display: flex; flex: 1 1 0; min-height: 0; }
+.studio-sidebar-mascot { position: relative; flex: 1 1 0; min-height: 0; }
 @media (min-width: 861px) {
+  .studio-sidebar.is-collapsed [data-robot-variant="sidebar-buddy"] { display: none; }
   .studio-sidebar.is-collapsed .studio-sidebar-mascot {
     --robot-compact-width: 43px;
     --robot-compact-height: 44px;

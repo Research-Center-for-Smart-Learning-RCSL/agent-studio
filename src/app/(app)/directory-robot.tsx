@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useI18n } from "@/lib/i18n-client";
 import { playEffect } from "@/lib/sfx";
-import { robotVariants, type RobotVariant } from "./directory-robot-variants";
+import { isSidebarRobot, robotVariants, type RobotVariant } from "./directory-robot-variants";
 import type { mountRobotScene, RobotPose } from "./directory-robot-scene";
 import styles from "./directory-robot.module.css";
 
@@ -13,9 +13,10 @@ const reactions = [
   { pose: "heart", message: "送你一顆愛心。" },
 ] as const;
 
-export function DirectoryRobot({ size = "default", variant = "directory" }: {
+export function DirectoryRobot({ size = "default", variant = "directory", greeting = false }: {
   size?: "default" | "compact";
   variant?: RobotVariant;
+  greeting?: boolean;
 }) {
   const { t } = useI18n();
   const [interaction, setInteraction] = useState({ step: -1, active: false });
@@ -28,7 +29,8 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
   const scene = useRef<ReturnType<typeof mountRobotScene>>(null);
   const latestPose = useRef<RobotPose>("idle");
   const reaction = interaction.active ? reactions[interaction.step % reactions.length] : null;
-  const pose = reaction?.pose ?? "idle";
+  const pose = reaction?.pose ?? (greeting ? "wave" : "idle");
+  const sidebar = isSidebarRobot(variant);
   const label = t("跟小機器人打招呼");
   const { antennas, shell, trim } = robotVariants[variant];
   const modelReady = modelVariant === variant;
@@ -91,8 +93,8 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
       const width = label.offsetWidth;
       const height = label.offsetHeight;
       const gap = 5;
-      const minY = variant === "sidebar" ? Math.max(gap, laneBounds.top) : gap;
-      const maxY = variant === "sidebar" ? laneBounds.bottom : document.documentElement.clientHeight - gap;
+      const minY = sidebar ? Math.max(gap, laneBounds.top) : gap;
+      const maxY = sidebar ? laneBounds.bottom : document.documentElement.clientHeight - gap;
       const above = top - height - gap;
       const y = above >= minY ? above : Math.max(minY, Math.min(bottom + gap, maxY - height));
       const left = Math.max(gap, Math.min(x - width / 2, document.documentElement.clientWidth - width - gap));
@@ -102,7 +104,7 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
 
     positionBubble();
     return () => cancelAnimationFrame(frame);
-  }, [reaction, variant]);
+  }, [reaction, sidebar]);
 
   return (
     <div
@@ -111,6 +113,7 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
       data-pose={pose}
       data-size={size}
       data-robot-variant={variant}
+      data-sidebar-robot={sidebar || undefined}
       style={{ "--robot-shell": shell, "--robot-trim": trim } as CSSProperties}
     >
       <button

@@ -13,6 +13,14 @@ export const robotVariants = {
     antennas: [{ offset: -1, tip: "#bcb19c" }, { offset: 1, tip: "#bcb19c" }],
   },
   sidebar: { shell: "#bdb1c9", trim: "#887a99", antennas: [{ offset: 0, tip: "#aca4bd" }] },
+  "sidebar-buddy": {
+    shell: "#afc1b9", trim: "#738d83",
+    antennas: [{ offset: -1, tip: "#bea79f" }, { offset: 1, tip: "#bea79f" }],
+  },
 } satisfies Record<string, RobotAppearance>;
 
 export type RobotVariant = keyof typeof robotVariants;
+
+export function isSidebarRobot(variant: RobotVariant) {
+  return variant === "sidebar" || variant === "sidebar-buddy";
+}
