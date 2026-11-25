@@ -9,6 +9,7 @@
 }
 
 .masthead {
+  --robot-focus-color: var(--studio-accent);
   display: flex;
   align-items: center;
   gap: 12px;

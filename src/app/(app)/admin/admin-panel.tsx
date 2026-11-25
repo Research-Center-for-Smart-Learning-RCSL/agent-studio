@@ -40,7 +40,7 @@ export function AdminPanel(props: Props) {
     <App className={styles.page}>
       <div className={styles.masthead}>
         <h1 className={styles.title}>{t("管理")}</h1>
-        <DirectoryRobot size="compact" variant="admin" />
+        <DirectoryRobot variant="admin" />
       </div>
       <Tabs
         size="small"

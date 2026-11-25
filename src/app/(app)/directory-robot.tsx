@@ -22,6 +22,9 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
   const [modelVariant, setModelVariant] = useState<RobotVariant | null>(null);
   const host = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
+  const mascot = useRef<HTMLDivElement>(null);
+  const flatRobot = useRef<HTMLSpanElement>(null);
+  const bubble = useRef<HTMLSpanElement>(null);
   const scene = useRef<ReturnType<typeof mountRobotScene>>(null);
   const latestPose = useRef<RobotPose>("idle");
   const reaction = interaction.active ? reactions[interaction.step % reactions.length] : null;
@@ -70,8 +73,40 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
     return () => window.clearTimeout(timer);
   }, [interaction]);
 
+  useEffect(() => {
+    const label = bubble.current;
+    const lane = mascot.current;
+    const model = host.current;
+    if (!reaction || !label || !lane || !model) return;
+    let frame: number;
+
+    const positionBubble = () => {
+      const laneBounds = lane.getBoundingClientRect();
+      const modelBounds = model.getBoundingClientRect();
+      const flatBounds = flatRobot.current?.getBoundingClientRect() ?? modelBounds;
+      const anchor = scene.current?.getBubbleAnchor();
+      const x = anchor ? modelBounds.left + anchor.x * modelBounds.width : (flatBounds.left + flatBounds.right) / 2;
+      const top = anchor ? modelBounds.top + anchor.top * modelBounds.height : flatBounds.top;
+      const bottom = anchor ? modelBounds.top + anchor.bottom * modelBounds.height : flatBounds.bottom;
+      const width = label.offsetWidth;
+      const height = label.offsetHeight;
+      const gap = 5;
+      const minY = variant === "sidebar" ? Math.max(gap, laneBounds.top) : gap;
+      const maxY = variant === "sidebar" ? laneBounds.bottom : document.documentElement.clientHeight - gap;
+      const above = top - height - gap;
+      const y = above >= minY ? above : Math.max(minY, Math.min(bottom + gap, maxY - height));
+      const left = Math.max(gap, Math.min(x - width / 2, document.documentElement.clientWidth - width - gap));
+      label.style.transform = `translate(${Math.round(left - laneBounds.left)}px, ${Math.round(y - laneBounds.top)}px)`;
+      frame = requestAnimationFrame(positionBubble);
+    };
+
+    positionBubble();
+    return () => cancelAnimationFrame(frame);
+  }, [reaction, variant]);
+
   return (
     <div
+      ref={mascot}
       className={styles.mascot}
       data-pose={pose}
       data-size={size}
@@ -103,7 +138,7 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
           {!modelReady && (
             <span className={styles.flatArt}>
               <span className={styles.shadow} />
-              <span className={styles.robot}>
+              <span ref={flatRobot} className={styles.robot}>
                 <span className={styles.armLeft} />
                 <span className={styles.armRight} />
                 <span className={styles.body}><span /></span>
@@ -126,7 +161,7 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
           )}
         </span>
       </button>
-      <span className={styles.bubble} role="status">{reaction ? t(reaction.message) : ""}</span>
+      <span ref={bubble} className={styles.bubble} role="status">{reaction ? t(reaction.message) : ""}</span>
     </div>
   );
 }

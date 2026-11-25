@@ -209,6 +209,8 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
   let lean = 0;
   let squash = 0;
   let elevation = 0;
+  const antennaAnchor = new Vector3();
+  const feetAnchor = new Vector3();
   root.rotation.y = 0.16;
 
   function render(dt: number) {
@@ -302,7 +304,7 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
     camera.left = -halfWidth;
     camera.right = halfWidth;
     camera.updateProjectionMatrix();
-    travelRange = Math.max(0, halfWidth - 0.98);
+    travelRange = variant === "sidebar" ? 0 : Math.max(0, halfWidth - 0.98);
     root.position.x = MathUtils.clamp(root.position.x, -travelRange, travelRange);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height, false);
@@ -341,6 +343,17 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
   syncAnimation();
 
   return {
+    getBubbleAnchor() {
+      antennaAnchor.set(0, 0.73, 0);
+      head.localToWorld(antennaAnchor).project(camera);
+      feetAnchor.set(0, -0.35, 0);
+      root.localToWorld(feetAnchor).project(camera);
+      return {
+        x: (antennaAnchor.x + 1) / 2,
+        top: (1 - antennaAnchor.y) / 2,
+        bottom: (1 - feetAnchor.y) / 2,
+      };
+    },
     setPose(nextPose: RobotPose) {
       if (nextPose === pose) return;
       pose = nextPose;
