@@ -12,6 +12,12 @@ const tracks = [
   { src: "/music/nocturne-op55-no2.mp3", title: "Chopin, Nocturne Op. 55 No. 2" },
 ] as const;
 
+function playMusic(element: HTMLAudioElement) {
+  if (getAudioSettings().music && element.paused) {
+    void element.play().catch(() => undefined);
+  }
+}
+
 /** Click and dialog sounds and the background piano on every page (the element lives in the layout, so a page change does not stop it), and one panel to set the volume or turn either off. */
 export function AppSound() {
   const { t } = useI18n();
@@ -21,34 +27,41 @@ export function AppSound() {
   const [playing, setPlaying] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(0);
-  const getMusicOn = () => getAudioSettings().music;
-
-  const next = useCallback((step: number) => setIndex((i) => (i + step + tracks.length) % tracks.length), []);
+  const next = useCallback((step: number) => {
+    const element = audio.current;
+    if (!element || !getAudioSettings().music) return;
+    const nextIndex = (indexRef.current + step + tracks.length) % tracks.length;
+    indexRef.current = nextIndex;
+    element.src = tracks[nextIndex].src;
+    setIndex(nextIndex);
+    playMusic(element);
+  }, []);
 
   // The element lives as long as the page; the browser blocks it until the person has touched the page once.
   useEffect(() => {
     const element = new Audio();
     element.preload = "none";
-    element.addEventListener("play", () => setPlaying(true));
-    element.addEventListener("pause", () => setPlaying(false));
-    element.addEventListener("ended", () => next(1));
+    element.src = tracks[indexRef.current].src;
+    const started = () => setPlaying(true);
+    const paused = () => setPlaying(false);
+    const ended = () => {
+      paused();
+      next(1);
+    };
+    element.addEventListener("play", started);
+    element.addEventListener("pause", paused);
+    element.addEventListener("ended", ended);
     audio.current = element;
     return () => {
+      element.removeEventListener("play", started);
+      element.removeEventListener("pause", paused);
+      element.removeEventListener("ended", ended);
       element.pause();
       element.removeAttribute("src");
       element.load();
       audio.current = null;
     };
   }, [next]);
-
-  useEffect(() => {
-    const element = audio.current;
-    if (!element) return;
-    indexRef.current = index;
-    const wasPlaying = !element.paused;
-    element.src = tracks[index].src;
-    if (wasPlaying || (index !== 0 && getMusicOn())) void element.play().catch(() => undefined);
-  }, [index]);
 
   useEffect(() => {
     const element = audio.current;
@@ -63,16 +76,9 @@ export function AppSound() {
       element.pause();
       return;
     }
-    const start = () => {
-      if (!element.src) element.src = tracks[indexRef.current].src;
-      void element.play().catch(() => undefined);
-    };
-    start();
-    const events = ["pointerdown", "keydown"] as const;
-    const retry = () => {
-      if (element.paused && getMusicOn()) start();
-      for (const name of events) window.removeEventListener(name, retry);
-    };
+    const retry = () => playMusic(element);
+    retry();
+    const events = ["pointerup", "click", "keydown"] as const;
     for (const name of events) window.addEventListener(name, retry);
     return () => { for (const name of events) window.removeEventListener(name, retry); };
   }, [settings.music]);
