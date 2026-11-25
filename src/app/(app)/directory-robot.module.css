@@ -54,32 +54,23 @@
   left: 0;
   width: var(--robot-compact-width, 62px);
   pointer-events: auto;
-  animation: sidebarPatrol 24s linear infinite;
-  animation-play-state: paused;
+  translate: var(--robot-position, calc(var(--patrol-x) * .06) var(--patrol-y));
 }
 
 .mascot[data-robot-variant="sidebar-buddy"] .button {
-  animation-direction: reverse;
-  animation-delay: -12s;
+  translate: var(--robot-position, calc(var(--patrol-x) * .94) 0px);
 }
 
-.mascot[data-sidebar-robot][data-pose="idle"] .button { animation-play-state: running; }
-.mascot[data-sidebar-robot][data-pose="idle"] .button:focus-visible { animation-play-state: paused; }
-
-@media (hover: hover) {
-  .mascot[data-sidebar-robot][data-pose="idle"] .button:hover { animation-play-state: paused; }
+.mascot[data-sidebar-robot] .robot {
+  transform: perspective(12em) rotateY(var(--robot-facing, 0rad));
+  transform-style: preserve-3d;
+  transition: transform .44s ease-in-out;
 }
+
+.mascot[data-sidebar-robot] .face { backface-visibility: hidden; }
 
 @container sidebar-robot (height < 58px) {
   .mascot[data-sidebar-robot] :is(.button, .bubble) { display: none; }
-}
-
-@keyframes sidebarPatrol {
-  0%, 7%, 100% { translate: calc(var(--patrol-x) * .5) var(--patrol-y); }
-  27% { translate: var(--patrol-x) calc(var(--patrol-y) * .45); }
-  46%, 53% { translate: calc(var(--patrol-x) * .5) 0; }
-  73% { translate: 0 calc(var(--patrol-y) * .45); }
-  94% { translate: calc(var(--patrol-x) * .5) var(--patrol-y); }
 }
 
 .stage span { box-sizing: border-box; }
@@ -300,6 +291,8 @@
 .mascot[data-pose="idle"] .flatArt { animation-play-state: running; }
 .mascot[data-sidebar-robot] .flatArt { animation: none; }
 .mascot[data-pose="idle"] .robot { animation: hopPose 15s ease-in-out infinite; }
+.mascot[data-sidebar-robot][data-pose="idle"] :is(.robot, .head) { animation: none; }
+.mascot[data-sidebar-robot] .head { transform: none; transform-style: preserve-3d; }
 .mascot[data-pose="idle"] .eyes > span { animation: blink 14s ease-in-out infinite; }
 .mascot[data-pose="idle"] .antenna { animation: antennaWiggle 14s ease-in-out infinite; }
 .mascot[data-pose="wave"] .armRight { animation: wave 1s ease-in-out 2; }
@@ -369,9 +362,10 @@
   }
 
   .mascot[data-sidebar-robot] .button {
-    animation: none;
     translate: calc(var(--patrol-x) * .25) calc(var(--patrol-y) * .5);
   }
+
+  .mascot[data-sidebar-robot] .robot { transform: none; transition: none; }
 
   .mascot[data-robot-variant="sidebar-buddy"] .button {
     translate: calc(var(--patrol-x) * .75) calc(var(--patrol-y) * .5);

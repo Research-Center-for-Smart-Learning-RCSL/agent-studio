@@ -94,7 +94,7 @@ export function AppSidebar({ items }: { items: { key: SidebarKey; label: string 
             </Link>
           ))}
         </nav>
-        <SidebarRobots />
+        <SidebarRobots drawerOpen={open} />
         <button
           type="button"
           className="studio-collapse"

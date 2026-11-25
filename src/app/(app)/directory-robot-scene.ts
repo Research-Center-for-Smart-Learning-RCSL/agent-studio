@@ -205,6 +205,8 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
   let poseTime = 0;
   let pose: RobotPose = "idle";
   let attentive = false;
+  const sidebar = isSidebarRobot(variant);
+  let facing = 0;
   let travelRange = 0;
   let lean = 0;
   let squash = 0;
@@ -215,7 +217,7 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
 
   function render(dt: number) {
     const reduced = motion.matches;
-    const exploring = pose === "idle" && !reduced;
+    const exploring = !sidebar && pose === "idle" && !reduced;
     const pace = Math.max(1, travelRange / 3.2);
     if (exploring) patrolTime = (patrolTime + dt / pace) % 15;
     poseTime += dt;
@@ -238,8 +240,9 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
       root.position.x = 0;
       patrolTime = 0;
     }
-    const yaw = turning ? direction * 0.96 : 0.16;
-    root.rotation.y = reduced ? 0.16 : MathUtils.damp(root.rotation.y, yaw, 8, dt);
+    const yaw = sidebar ? facing : turning ? direction * 0.96 : 0.16;
+    const difference = Math.atan2(Math.sin(yaw - root.rotation.y), Math.cos(yaw - root.rotation.y));
+    root.rotation.y = reduced ? 0.16 : MathUtils.damp(root.rotation.y, root.rotation.y + difference, 10, dt);
 
     const cheering = !reduced && pose === "happy" && poseTime < 1.6;
     if (hopping) {
@@ -277,13 +280,14 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
 
     let look = Math.sin(patrolTime * 1.8) * 0.27;
     if (hopping) look = -direction * 0.15;
-    if (attentive) look = -root.rotation.y;
-    if (pose === "wave") look = 0.44;
+    if (attentive && !sidebar) look = -root.rotation.y;
+    if (pose === "wave") look = sidebar ? 0 : 0.44;
     if (pose === "happy") look = -0.3;
     if (pose === "heart") look = 0.28;
     head.rotation.y = reduced ? 0 : MathUtils.damp(head.rotation.y, look, 9, dt);
     head.rotation.z = reduced ? 0 : MathUtils.damp(head.rotation.z, -look * 0.14, 7, dt);
-    const blink = pose === "idle" && !reduced && patrolTime % 3.8 < 0.12;
+    const blinkTime = sidebar ? poseTime : patrolTime;
+    const blink = pose === "idle" && !reduced && blinkTime % 3.8 < 0.12;
     for (const eye of eyes) eye.scale.set(0.053, blink ? 0.016 : 0.082, 0.024);
 
     heart.visible = pose === "heart";
@@ -304,7 +308,7 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
     camera.left = -halfWidth;
     camera.right = halfWidth;
     camera.updateProjectionMatrix();
-    travelRange = isSidebarRobot(variant) ? 0 : Math.max(0, halfWidth - 0.98);
+    travelRange = sidebar ? 0 : Math.max(0, halfWidth - 0.98);
     root.position.x = MathUtils.clamp(root.position.x, -travelRange, travelRange);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height, false);
@@ -362,6 +366,9 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
     },
     setAttentive(next: boolean) {
       attentive = next;
+    },
+    setFacing(angle: number) {
+      facing = angle;
     },
     dispose() {
       renderer.setAnimationLoop(null);

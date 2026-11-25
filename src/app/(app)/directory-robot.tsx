@@ -13,10 +13,11 @@ const reactions = [
   { pose: "heart", message: "送你一顆愛心。" },
 ] as const;
 
-export function DirectoryRobot({ size = "default", variant = "directory", greeting = false }: {
+export function DirectoryRobot({ size = "default", variant = "directory", greeting = false, facing = 0 }: {
   size?: "default" | "compact";
   variant?: RobotVariant;
   greeting?: boolean;
+  facing?: number;
 }) {
   const { t } = useI18n();
   const [interaction, setInteraction] = useState({ step: -1, active: false });
@@ -28,6 +29,7 @@ export function DirectoryRobot({ size = "default", variant = "directory", greeti
   const bubble = useRef<HTMLSpanElement>(null);
   const scene = useRef<ReturnType<typeof mountRobotScene>>(null);
   const latestPose = useRef<RobotPose>("idle");
+  const latestFacing = useRef(facing);
   const reaction = interaction.active ? reactions[interaction.step % reactions.length] : null;
   const pose = reaction?.pose ?? (greeting ? "wave" : "idle");
   const sidebar = isSidebarRobot(variant);
@@ -51,6 +53,7 @@ export function DirectoryRobot({ size = "default", variant = "directory", greeti
       });
       if (!scene.current) return;
       scene.current.setPose(latestPose.current);
+      scene.current.setFacing(latestFacing.current);
       scene.current.setAttentive(button.current?.matches(":hover, :focus-visible") ?? false);
       setModelVariant(variant);
     }).catch(() => {
@@ -66,6 +69,11 @@ export function DirectoryRobot({ size = "default", variant = "directory", greeti
     latestPose.current = pose;
     scene.current?.setPose(pose);
   }, [pose]);
+
+  useEffect(() => {
+    latestFacing.current = facing;
+    scene.current?.setFacing(facing);
+  }, [facing]);
 
   useEffect(() => {
     if (!interaction.active) return;
@@ -114,7 +122,11 @@ export function DirectoryRobot({ size = "default", variant = "directory", greeti
       data-size={size}
       data-robot-variant={variant}
       data-sidebar-robot={sidebar || undefined}
-      style={{ "--robot-shell": shell, "--robot-trim": trim } as CSSProperties}
+      style={{
+        "--robot-shell": shell,
+        "--robot-trim": trim,
+        "--robot-facing": `${facing}rad`,
+      } as CSSProperties}
     >
       <button
         ref={button}
