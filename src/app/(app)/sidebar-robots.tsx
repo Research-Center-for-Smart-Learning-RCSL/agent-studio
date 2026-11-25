@@ -56,10 +56,12 @@ function patrolRoutes(width: number, height: number, button: HTMLButtonElement, 
     }];
   }
 
+  const pairCeiling = ceiling + (y - ceiling) / 3;
+  const pairSpan = y - pairCeiling;
   // On short viewports, leave room for the pair to meet side by side.
-  const tall = y >= button.offsetHeight + 22;
-  const separation = tall ? (button.offsetHeight + 22) / 2 : y / 2;
-  const centerY = Math.max(separation, Math.min(y - separation, y * pattern.centerY));
+  const tall = pairSpan >= button.offsetHeight + 22;
+  const separation = tall ? (button.offsetHeight + 22) / 2 : pairSpan / 2;
+  const centerY = pairCeiling + Math.max(separation, Math.min(pairSpan - separation, pairSpan * pattern.centerY));
   return [
     {
       start: { x: x * 0.06, y },
@@ -68,8 +70,8 @@ function patrolRoutes(width: number, height: number, button: HTMLButtonElement, 
       returnBend: x * (tall ? 1 - pattern.bend : 0.18),
     },
     {
-      start: { x: x * 0.94, y: ceiling },
-      stop: { x: x * (tall ? pattern.centerX + 0.19 : 0.86), y: Math.max(ceiling, centerY - separation) },
+      start: { x: x * 0.94, y: pairCeiling },
+      stop: { x: x * (tall ? pattern.centerX + 0.19 : 0.86), y: centerY - separation },
       outboundBend: x * (tall ? 1 - pattern.bend : 0.92),
       returnBend: x * (tall ? pattern.bend : 0.82),
     },
