@@ -246,6 +246,11 @@ a {
   overflow-wrap: anywhere;
 }
 
+@media (max-width: 640px) {
+  .directory-heading { flex-wrap: wrap; }
+  .directory-heading > [data-robot-variant="directory"] { flex-basis: 100%; }
+}
+
 .directory-hero h1 {
   margin: 0;
   font-size: clamp(23px, 3vw, 34px);
@@ -585,8 +590,12 @@ a {
 .agent-editor-page { margin-top: -24px; }
 .agent-editor-heading { margin-bottom: 8px; }
 .agent-editor-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.agent-editor-title-copy { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+.agent-editor-title-copy { min-width: 0; flex-wrap: wrap; }
 .agent-editor-title-copy .ant-typography { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .agent-editor-title-row { flex-wrap: wrap; }
+  .agent-editor-title-row > [data-robot-variant="editor"] { flex-basis: 100%; order: 1; }
+}
 .agent-editor-settings-card > .ant-card-body { padding: 8px 16px 12px !important; }
 .agent-editor-settings-card .ant-tabs-nav { margin-bottom: 8px !important; }
 .agent-editor-settings-col.is-instructions-active { display: flex; flex-direction: column; min-height: 0; }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useI18n } from "@/lib/i18n-client";
 import { playEffect } from "@/lib/sfx";
-import { robotAntennas, type RobotVariant } from "./directory-robot-antennas";
+import { robotVariants, type RobotVariant } from "./directory-robot-variants";
 import type { mountRobotScene, RobotPose } from "./directory-robot-scene";
 import styles from "./directory-robot.module.css";
 
@@ -27,7 +27,7 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
   const reaction = interaction.active ? reactions[interaction.step % reactions.length] : null;
   const pose = reaction?.pose ?? "idle";
   const label = t("跟小機器人打招呼");
-  const antennas = robotAntennas[variant];
+  const { antennas, shell, trim } = robotVariants[variant];
   const modelReady = modelVariant === variant;
 
   useEffect(() => {
@@ -71,7 +71,13 @@ export function DirectoryRobot({ size = "default", variant = "directory" }: {
   }, [interaction]);
 
   return (
-    <div className={styles.mascot} data-pose={pose} data-size={size}>
+    <div
+      className={styles.mascot}
+      data-pose={pose}
+      data-size={size}
+      data-robot-variant={variant}
+      style={{ "--robot-shell": shell, "--robot-trim": trim } as CSSProperties}
+    >
       <button
         ref={button}
         className={styles.button}

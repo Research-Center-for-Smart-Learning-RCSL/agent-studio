@@ -1,11 +1,13 @@
 .mascot {
   position: relative;
-  flex: none;
+  flex: 1 1 auto;
+  min-width: min-content;
   z-index: 1;
 }
 
 .button {
   display: block;
+  width: 100%;
   appearance: none;
   border: 0;
   border-radius: 12px;
@@ -23,13 +25,14 @@
 .stage {
   position: relative;
   display: block;
-  width: clamp(6.2em, 15vw, 8.6em);
+  container-type: inline-size;
+  min-width: 5.5em;
   height: 5.25em;
   font-size: clamp(13px, 2.3vw, 17px);
 }
 
 .mascot[data-size="compact"] .stage {
-  width: var(--robot-compact-width, 68px);
+  min-width: var(--robot-compact-width, 62px);
   height: var(--robot-compact-height, 58px);
   font-size: var(--robot-compact-font-size, 11px);
 }
@@ -51,7 +54,7 @@
 }
 
 .flatArt {
-  --hop-distance: clamp(.34em, 2vw, 1.2em);
+  --hop-distance: max(0px, calc(50cqi - 2.75em));
   position: absolute;
   inset: auto 0 0;
   width: 5.25em;
@@ -88,10 +91,10 @@
   display: grid;
   place-items: center;
   height: 1.78em;
-  border: .13em solid #5c798e;
+  border: .13em solid var(--robot-trim);
   border-radius: 39% 39% 22% 22% / 35% 35% 19% 19%;
-  background: linear-gradient(#e5eef3, #b0c5d2);
-  box-shadow: inset 0 -.13em #8faabd;
+  background: linear-gradient(color-mix(in srgb, var(--robot-shell) 55%, white), var(--robot-shell));
+  box-shadow: inset 0 -.13em color-mix(in srgb, var(--robot-shell), var(--robot-trim));
 }
 
 .body > span {
@@ -107,7 +110,7 @@
   width: .49em;
   height: 1.15em;
   border-radius: .45em;
-  background: #8aaabd;
+  background: color-mix(in srgb, var(--robot-shell), var(--robot-trim));
   transform-origin: 50% .17em;
 }
 
@@ -118,9 +121,9 @@
   box-sizing: border-box;
   width: .85em;
   height: .85em;
-  border: .1em solid #5c798e;
+  border: .1em solid var(--robot-trim);
   border-radius: 50%;
-  background: radial-gradient(circle at 36% 30%, #f4f9fc, #b9cfdb 66%, #92aec1);
+  background: radial-gradient(circle at 36% 30%, #f4f9fc, var(--robot-shell) 66%, var(--robot-trim));
 }
 
 .armLeft::after, .armRight::after {
@@ -135,9 +138,9 @@
   inset: 1.07em 1.08em auto;
   height: 2.25em;
   padding: .21em .2em;
-  border: .12em solid #65849a;
+  border: .12em solid var(--robot-trim);
   border-radius: 14% / 50%;
-  background: linear-gradient(135deg, #f4f8fb 10%, #a9c1d1 88%);
+  background: linear-gradient(135deg, #f4f8fb 10%, var(--robot-shell) 88%);
   box-shadow: inset 0 .1em #fff9, 0 .16em .28em #192d3e35;
 }
 
@@ -145,7 +148,7 @@
   bottom: 100%;
   width: .14em;
   height: .46em;
-  background: #9eb9cb;
+  background: var(--robot-trim);
   transform-origin: bottom;
 }
 
@@ -253,7 +256,7 @@
   .mascot[data-pose="heart"] .head { --head-angle: 24deg; }
 }
 
-.mascot[data-pose="idle"] .flatArt { animation: hopPath 15s ease-in-out infinite; }
+.mascot[data-pose="idle"] .flatArt { animation: hopPath 15s linear infinite; }
 .mascot[data-pose="idle"] .robot { animation: hopPose 15s ease-in-out infinite; }
 .mascot[data-pose="idle"] .eyes > span { animation: blink 14s ease-in-out infinite; }
 .mascot[data-pose="idle"] .antenna { animation: antennaWiggle 14s ease-in-out infinite; }
@@ -272,9 +275,9 @@
 }
 
 @keyframes hopPath {
-  0%, 21%, 49%, 59%, 85%, 100% { translate: 0; }
-  30%, 40% { translate: var(--hop-distance); }
-  68%, 76% { translate: calc(-1 * var(--hop-distance)); }
+  0%, 17%, 78%, 100% { translate: 0; }
+  31%, 34% { translate: var(--hop-distance); }
+  61%, 64% { translate: calc(-1 * var(--hop-distance)); }
 }
 
 @keyframes hopPose {

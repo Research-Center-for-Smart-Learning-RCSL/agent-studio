@@ -19,7 +19,7 @@ import {
   WebGLRenderer,
   type BufferGeometry,
 } from "three";
-import { robotAntennas, type RobotVariant } from "./directory-robot-antennas";
+import { robotVariants, type RobotVariant } from "./directory-robot-variants";
 
 export type RobotPose = "idle" | "wave" | "happy" | "heart";
 
@@ -88,11 +88,12 @@ function createFaceGeometry(halfWidth: number, halfHeight: number, depth: number
 }
 
 function createRobot(variant: RobotVariant) {
+  const colors = robotVariants[variant];
   const root = new Group();
   const head = new Group();
   const torso = new Group();
-  const shell = new MeshStandardMaterial({ color: "#afc6d6", roughness: 0.36, metalness: 0.12 });
-  const trim = new MeshStandardMaterial({ color: "#6e91a8", roughness: 0.5 });
+  const shell = new MeshStandardMaterial({ color: colors.shell, roughness: 0.36, metalness: 0.12 });
+  const trim = new MeshStandardMaterial({ color: colors.trim, roughness: 0.5 });
   const visor = new MeshStandardMaterial({ color: "#183447", roughness: 0.56, emissive: "#102532", emissiveIntensity: 0.28 });
   const glow = new MeshBasicMaterial({ color: "#d6f5ec" });
   const mint = new MeshStandardMaterial({ color: "#a6dac7", emissive: "#6baa94", emissiveIntensity: 0.27 });
@@ -109,7 +110,7 @@ function createRobot(variant: RobotVariant) {
   add(head, createFaceGeometry(0.607, 0.365, 0.502, 0.093), shell, 0, 0, 0);
   add(head, createFaceGeometry(0.525, 0.282, 0.11, 0.057), visor, 0, 0, 0.3);
   const antennaStem = new CapsuleGeometry(0.026, 0.16, 5, 10);
-  for (const { offset, tip } of robotAntennas[variant]) {
+  for (const { offset, tip } of colors.antennas) {
     const x = offset * 0.26;
     const antennaTip = new MeshStandardMaterial({ color: tip, roughness: 0.44 });
     add(head, antennaStem, trim, x, 0.52, 0);
@@ -212,19 +213,21 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
 
   function render(dt: number) {
     const reduced = motion.matches;
-    const exploring = pose === "idle" && !attentive && !reduced;
-    if (exploring) patrolTime = (patrolTime + dt) % 15;
+    const exploring = pose === "idle" && !reduced;
+    const pace = Math.max(1, travelRange / 3.2);
+    if (exploring) patrolTime = (patrolTime + dt / pace) % 15;
     poseTime += dt;
     const segment = patrol.find(({ end }) => patrolTime < end);
     const turning = Boolean(exploring && segment && patrolTime >= segment.start - 0.5);
     const hopping = Boolean(exploring && segment && patrolTime >= segment.start);
+    const hops = segment ? Math.round(segment.hops * pace) : 1;
     const cycle = segment
-      ? MathUtils.clamp((patrolTime - segment.start) / (segment.end - segment.start), 0, 1) * segment.hops
+      ? MathUtils.clamp((patrolTime - segment.start) / (segment.end - segment.start), 0, 1) * hops
       : 0;
     const completed = Math.floor(cycle);
     const patrolHop = hopAt(cycle - completed);
     const routeX = segment
-      ? MathUtils.lerp(segment.from, segment.to, (completed + patrolHop.distance) / segment.hops) * travelRange
+      ? MathUtils.lerp(segment.from, segment.to, (completed + patrolHop.distance) / hops) * travelRange
       : 0;
     const direction = segment ? Math.sign(segment.to - segment.from) : 0;
 
@@ -283,7 +286,8 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
 
     heart.visible = pose === "heart";
     const heartLift = reduced ? 0 : Math.min(poseTime, 1) * 0.27;
-    heart.position.set(root.position.x + 0.69, root.position.y + head.position.y + 0.42 + heartLift, 0.41);
+    const heartSide = root.position.x > camera.right - 1.3 ? -1 : 1;
+    heart.position.set(root.position.x + 0.69 * heartSide, root.position.y + head.position.y + 0.42 + heartLift, 0.41);
     heart.scale.setScalar(reduced ? 0.72 : 0.45 + Math.min(poseTime, 0.65) * 0.43);
     heart.rotation.y = reduced ? 0 : Math.sin(poseTime * 3) * 0.26;
     shadow.position.x = root.position.x;
@@ -298,7 +302,7 @@ export function mountRobotScene(host: HTMLElement, variant: RobotVariant, onCont
     camera.left = -halfWidth;
     camera.right = halfWidth;
     camera.updateProjectionMatrix();
-    travelRange = Math.max(0.25, Math.min(1.52, halfWidth - 0.98));
+    travelRange = Math.max(0, halfWidth - 0.98);
     root.position.x = MathUtils.clamp(root.position.x, -travelRange, travelRange);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height, false);

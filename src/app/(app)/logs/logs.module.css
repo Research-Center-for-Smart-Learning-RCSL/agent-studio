@@ -9,7 +9,7 @@
   --robot-focus-color: var(--studio-accent);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   min-height: 72px;
   padding-inline: clamp(8px, 1vw, 14px);
 }
