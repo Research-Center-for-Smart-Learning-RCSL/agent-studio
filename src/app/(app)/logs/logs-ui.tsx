@@ -16,13 +16,14 @@ import styles from "./logs.module.css";
 const interactive = "a, button, input, textarea, select, label, audio, video, .ant-checkbox-wrapper, .ant-select, .ant-tag-checkable";
 
 /** Row props that make a whole table row open `href`, as a plain click or in a new tab with Ctrl or Cmd. */
-export function useRowOpen() {
+export function useRowOpen(replace = false) {
   const router = useRouter();
   return (href: string | null) => ({
     className: href ? styles.clickRow : undefined,
     onClick: (event: MouseEvent<HTMLElement>) => {
       if (!href || (event.target as HTMLElement).closest(interactive) || window.getSelection()?.toString()) return;
       if (event.ctrlKey || event.metaKey) window.open(href, "_blank", "noopener");
+      else if (replace) router.replace(href, { scroll: false });
       else router.push(href);
     },
   });

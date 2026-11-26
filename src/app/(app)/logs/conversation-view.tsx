@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { listSearchOf } from "./split-layout";
 import { StarFilled, StarOutlined } from "@ant-design/icons";
 import { Button, Empty, InputNumber, Spin } from "antd";
 import { useI18n } from "@/lib/i18n-client";
@@ -21,10 +22,11 @@ type Loaded = { key: string; items: Turn[]; next: string | null; prev: string | 
 
 const asError = (error: unknown) => (error instanceof LogsError ? error : new LogsError(0, String(error)));
 
-export function ConversationView({ id }: { id: string }) {
+export function ConversationView({ id, listPath = "/logs" }: { id: string; listPath?: string }) {
   const { t } = useI18n();
   const { scope, ready } = useLogsScope();
-  const focus = useSearchParams().get("turn");
+  const search = useSearchParams();
+  const focus = search.get("turn");
   const [start, setStart] = useState<Params>({});
   const startKey = JSON.stringify(start);
   const key = JSON.stringify([id, focus, start, scope]);
@@ -90,7 +92,7 @@ export function ConversationView({ id }: { id: string }) {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <Link href="/logs">{t("← 回到對話列表")}</Link>
+        <Link className={styles.backLink} href={`${listPath}${listSearchOf(search)}`}>{listPath === "/logs" ? t("← 回到對話列表") : t("← 回到回合列表")}</Link>
         <ConversationTitle id={id} fallback={head?.conversation_title || id} />
         <Bookmark id={id} />
       </div>

@@ -546,7 +546,10 @@
     "最多可加入 {0} 個 skill": "Up to {0} skills can be added",
     "暫時無法讀取專案的 skills，仍可手動輸入 skill ID": "The project's skills cannot be loaded right now. You can still enter a skill ID by hand.",
     "專案尚未啟用 OpenAI 憑證查詢": "OpenAI lookups are not enabled for this project",
-    "專案的憑證已失效，請聯絡管理員": "The project credential is no longer valid. Contact an administrator."
+    "專案的憑證已失效，請聯絡管理員": "The project credential is no longer valid. Contact an administrator.",
+    "關閉": "Close",
+    "調整列表與內容的寬度": "Resize the list and the record",
+    "← 回到回合列表": "← Back to the turn list"
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1095,6 +1098,9 @@
     "最多可加入 {0} 個 skill": "Można dodać maksymalnie {0} skilli",
     "暫時無法讀取專案的 skills，仍可手動輸入 skill ID": "Nie można teraz wczytać skilli projektu. Nadal można wpisać identyfikator skilla ręcznie.",
     "專案尚未啟用 OpenAI 憑證查詢": "Zapytania do OpenAI nie są włączone dla tego projektu",
-    "專案的憑證已失效，請聯絡管理員": "Poświadczenie projektu jest nieważne. Skontaktuj się z administratorem."
+    "專案的憑證已失效，請聯絡管理員": "Poświadczenie projektu jest nieważne. Skontaktuj się z administratorem.",
+    "關閉": "Zamknij",
+    "調整列表與內容的寬度": "Zmień szerokość listy i rekordu",
+    "← 回到回合列表": "← Wróć do listy tur"
   }
 }

@@ -9,11 +9,17 @@ import { TurnExtras } from "./curation";
 import { MediaList, MessageText, RuntimeTag, StatusTag, Uploads } from "./logs-ui";
 import styles from "./logs.module.css";
 
-export const conversationHref = (id: string, turn?: string) =>
-  `/logs/conversations/${encodeURIComponent(id)}${turn ? `?turn=${encodeURIComponent(turn)}` : ""}`;
+/** The page of one conversation; `search` carries the list's filters so the list beside it stays as it was. */
+export function conversationHref(id: string, turn?: string, options: { search?: string; base?: string } = {}) {
+  const params = new URLSearchParams(options.search ?? "");
+  if (turn) params.set("turn", turn);
+  else params.delete("turn");
+  const query = params.toString();
+  return `${options.base ?? "/logs/conversations"}/${encodeURIComponent(id)}${query ? `?${query}` : ""}`;
+}
 
 /** One exchange: what the user said, then the reply. */
-export function TurnCard({ turn, highlight = false, query = "", showConversation = false }: { turn: Turn; highlight?: boolean; query?: string; showConversation?: boolean }) {
+export function TurnCard({ turn, highlight = false, query = "", showConversation = false, openHref }: { turn: Turn; highlight?: boolean; query?: string; showConversation?: boolean; openHref?: string }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [tags, setTags] = useState<string[] | null>(null);
@@ -32,7 +38,7 @@ export function TurnCard({ turn, highlight = false, query = "", showConversation
         {turn.agent && <span title={agentWhere(turn)}>{turn.agent}</span>}
         {(tags ?? turn.tags).map((tag) => <Tag key={tag}>{tag}</Tag>)}
         {showConversation && turn.conversation && (
-          <span className={styles.push}><Link className={styles.open} href={conversationHref(turn.conversation, turn.id)}>{t("在對話中查看")}<span aria-hidden="true"> ›</span></Link></span>
+          <span className={styles.push}><Link className={styles.open} href={openHref ?? conversationHref(turn.conversation, turn.id)}>{t("在對話中查看")}<span aria-hidden="true"> ›</span></Link></span>
         )}
       </header>
       {(turn.input_text != null || turn.attachments.length > 0 || hasMedia(userMedia)) && (

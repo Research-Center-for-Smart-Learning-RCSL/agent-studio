@@ -477,3 +477,32 @@
 .plain tr:target {
   outline: 2px solid var(--studio-accent);
 }
+
+/* A list with its open record beside it (SplitLayout); each side scrolls on its own. */
+.splitOn { display: grid; grid-template-columns: 34% auto minmax(0, 1fr); height: calc(100dvh - var(--split-top, 0px) - 12px); }
+.splitOn > * { overflow: auto; min-height: 0; }
+.splitDragging { user-select: none; cursor: col-resize; }
+.splitOn > .splitDetail { position: relative; padding-inline-start: 40px; }
+/* A 1px line with a wider grip; the list's scrollbar runs down its right edge, so the grip lies over the record's side. */
+.splitOn > .splitDivider { position: relative; z-index: 3; overflow: visible; width: 9px; margin-inline-end: -8px; cursor: col-resize; touch-action: none; outline: none; }
+.splitDivider::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--studio-border); transition: background 0.15s, width 0.15s; }
+.splitDivider:hover::before, .splitDivider:focus-visible::before, .splitDivider:active::before { width: 3px; background: var(--studio-accent); }
+.splitDividerClose { position: absolute; top: 8px; left: 6px; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: #fff; color: inherit; border: 1.5px solid var(--studio-border); cursor: pointer; box-shadow: 0 2px 6px #00000033; }
+.splitDividerClose:hover { background: var(--studio-accent); color: #fff; border-color: var(--studio-accent); }
+/* With the record taken away, the bar keeps a strip of its own for the close button. */
+.splitOn > .splitDivider[aria-valuenow="100"] { width: 40px; margin-inline-end: 0; }
+.splitOn > .splitDivider[aria-valuenow="100"] + .splitDetail { padding-inline-start: 0; }
+.splitClose { position: sticky; top: 0; float: right; z-index: 1; margin: 6px 8px 0 0; padding: 2px 8px; background: #fff; border: 1px solid var(--studio-border); border-radius: 6px; cursor: pointer; }
+.splitOn .splitDetail .backLink { display: none; }
+.splitOn .splitList > .panePage:focus { outline: none; }
+.panePage { padding: 8px; }
+.paneFilters :global(.ant-select), .paneFilters input[type="date"] { max-width: 100%; }
+.paneFilters .search { flex: 1 1 100%; max-width: none; min-width: 0; }
+.paneRow { min-width: 0; display: grid; gap: 2px; }
+.paneHead { display: flex; flex-flow: row wrap; gap: 2px 8px; align-items: baseline; font-size: 13px; }
+.paneAgent { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.turnRow { padding: 8px 10px; background: #fff; border: 1px solid var(--studio-border); border-radius: 8px; cursor: pointer; }
+.turnRow:hover { background: #eef3f6; }
+.panePage :global(.ant-table-tbody) > tr.selectedRow > td, .turnRow.selectedRow { background: #e3ecf1; }
+.panePage :global(.ant-table-tbody) > tr.selectedRow > td:first-child, .turnRow.selectedRow { box-shadow: inset 3px 0 0 var(--studio-accent); }
+.selectedRow { background: #e3ecf1; }
