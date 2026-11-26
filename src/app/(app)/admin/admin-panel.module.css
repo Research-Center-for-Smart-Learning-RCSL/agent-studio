@@ -27,12 +27,15 @@
   margin-block-end: 10px;
 }
 
+/* A flex column, not a grid: the floating form (.dockCard) can only move within its own grid row, which has no room. */
 .stack {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   min-width: 0;
 }
+
+.stack > * { min-width: 0; }
 
 .page .card > :global(.ant-card-head) {
   min-height: 30px;
