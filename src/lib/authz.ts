@@ -5,18 +5,21 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db/client";
 import { memberships, projects, users } from "@/db/schema";
+import { managedOrganizations } from "@/lib/org-admin";
 
-export type Role = "viewer" | "editor";
+export type Role = "viewer" | "editor" | "manager";
 
 export type CurrentUser = {
   email: string;
   name: string | null;
   isAdmin: boolean;
+  /** Organizations this user manages: their members and credentials, and an editor's rights in every project. */
+  managedOrgIds: Set<string>;
   /** Effective role per project id; admins are not listed and may do anything. */
   projectRoles: Map<string, Role>;
 };
 
-const rank: Record<Role, number> = { viewer: 1, editor: 2 };
+const rank: Record<Role, number> = { viewer: 1, editor: 2, manager: 3 };
 
 function higher(a: Role | undefined, b: Role): Role {
   return a && rank[a] >= rank[b] ? a : b;
@@ -52,7 +55,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   for (const membership of rows.filter((r) => r.projectId)) {
     projectRoles.set(membership.projectId!, higher(projectRoles.get(membership.projectId!), membership.role));
   }
-  return { email, name: user.name, isAdmin: user.isAdmin, projectRoles };
+  return { email, name: user.name, isAdmin: user.isAdmin, managedOrgIds: managedOrganizations(rows), projectRoles };
 });
 
 export async function requireUser(): Promise<CurrentUser> {
@@ -76,6 +79,15 @@ export class ForbiddenError extends Error {
 export async function requireProjectRole(projectId: string, role: Role): Promise<CurrentUser> {
   const user = await requireUser();
   if (!can(user, projectId, role)) throw new ForbiddenError();
+  return user;
+}
+
+/** Whether the admin area is open to this user: admins, and managers of at least one organization. */
+export const canOpenAdmin = (user: CurrentUser) => user.isAdmin || user.managedOrgIds.size > 0;
+
+export async function requireManager(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (!canOpenAdmin(user)) throw new ForbiddenError();
   return user;
 }
 

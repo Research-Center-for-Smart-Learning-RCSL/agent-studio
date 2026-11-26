@@ -1,7 +1,7 @@
 import { LanguageSelect } from "@/lib/i18n-client";
 import { getTranslator } from "@/lib/i18n-server";
 import { signOut } from "@/auth";
-import { requireUser } from "@/lib/authz";
+import { canOpenAdmin, requireUser } from "@/lib/authz";
 import { logsConfigured } from "@/lib/logs";
 import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -23,7 +23,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const items: { key: SidebarKey; label: string }[] = [
     { key: "agents", label: "Agents" },
     ...(logsConfigured() ? [{ key: "logs" as const, label: "Logs" }] : []),
-    ...(user.isAdmin ? [{ key: "admin" as const, label: t("管理") }] : []),
+    ...(canOpenAdmin(user) ? [{ key: "admin" as const, label: t("管理") }] : []),
   ];
   return (
     <div className="studio-shell">

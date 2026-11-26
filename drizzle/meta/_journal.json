@@ -15,6 +15,13 @@
       "when": 1795511058018,
       "tag": "0001_scope_mcp_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795657917653,
+      "tag": "0002_org_manager",
+      "breakpoints": true
     }
   ]
 }

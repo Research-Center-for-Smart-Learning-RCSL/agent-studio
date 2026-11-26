@@ -22,11 +22,14 @@ import {
 
 type Props = {
   me: string;
+  /** Admins see and change everything; an organization manager only their organizations'. */
+  isAdmin: boolean;
+  managedOrgIds: string[];
   users: { email: string; name: string | null; isAdmin: boolean; lastSeenAt: string | null }[];
-  memberships: { id: number; userEmail: string; organizationId: string | null; projectId: string | null; role: "viewer" | "editor" }[];
+  memberships: { id: number; userEmail: string; organizationId: string | null; projectId: string | null; role: "viewer" | "editor" | "manager" }[];
   organizations: { id: string; name: string; active: boolean }[];
   projects: { id: string; name: string; organizationId: string; active: boolean }[];
-  secrets: { name: string; description: string; grants: SecretGrant[]; updatedBy: string | null; updatedAt: string }[];
+  secrets: { name: string; description: string; organizationId: string | null; grants: SecretGrant[]; updatedBy: string | null; updatedAt: string }[];
   audit: { id: number; actor: string | null; action: string; targetType: string; targetId: string; detail: unknown; createdAt: string }[];
   mcpWithoutSecret: { id: string; name: string; servers: string[] }[];
   unapprovedReferences: { id: string; name: string; projectId: string; serverUrl: string | null; field: string; secret: string }[];
@@ -48,7 +51,7 @@ export function AdminPanel(props: Props) {
         items={[
           { key: "members", label: t("成員與權限"), children: <Members {...props} /> },
           { key: "secrets", label: t("憑證"), children: <Secrets {...props} /> },
-          { key: "sync", label: t("RCSL 同步"), children: <Sync {...props} /> },
+          ...(props.isAdmin ? [{ key: "sync", label: t("RCSL 同步"), children: <Sync {...props} /> }] : []),
           { key: "audit", label: t("操作紀錄"), children: <Audit {...props} /> },
         ]}
       />
@@ -74,7 +77,7 @@ function useAction() {
 function Members(props: Props) {
   const { t, locale } = useI18n();
   const act = useAction();
-  const [form] = Form.useForm<{ email: string; scope: "organization" | "project"; scopeId: string; role: "viewer" | "editor" }>();
+  const [form] = Form.useForm<{ email: string; scope: "organization" | "project"; scopeId: string; role: "viewer" | "editor" | "manager" }>();
   const scope = Form.useWatch("scope", form) ?? "organization";
   const orgName = new Map(props.organizations.map((o) => [o.id, o.name]));
   const projectName = new Map(props.projects.map((p) => [p.id, `${orgName.get(p.organizationId)} / ${p.name}`]));
@@ -126,6 +129,8 @@ function Members(props: Props) {
               options={[
                 { value: "editor", label: t("可編輯") },
                 { value: "viewer", label: t("只能檢視") },
+                // Managing is over a whole organization, so it is offered only with that scope.
+                ...(scope === "organization" ? [{ value: "manager", label: t("組織管理者") }] : []),
               ]}
             />
           </Form.Item>
@@ -150,32 +155,32 @@ function Members(props: Props) {
                   .map((m) => (
                     <Tag
                       key={m.id}
-                      color={m.role === "editor" ? "green" : "default"}
+                      color={m.role === "manager" ? "gold" : m.role === "editor" ? "green" : "default"}
                       closable
                       onClose={(e) => {
                         e.preventDefault();
                         act(removeMembershipAction(m.id), t("已移除"));
                       }}
                     >
-                      {m.organizationId ? t("組織：{0}", [orgName.get(m.organizationId)]) : t("專案：{0}", [projectName.get(m.projectId!)])}（{m.role === "editor" ? t("編輯") : t("檢視")}）
+                      {m.organizationId ? t("組織：{0}", [orgName.get(m.organizationId)]) : t("專案：{0}", [projectName.get(m.projectId!)])}（{m.role === "manager" ? t("組織管理者") : m.role === "editor" ? t("編輯") : t("檢視")}）
                     </Tag>
                   ))}
               </Space>
             ),
           },
-          {
+          ...(props.isAdmin ? [{
             title: t("管理員"),
             width: 90,
-            render: (_, u) => (
+            render: (_: unknown, u: Props["users"][number]) => (
               <Switch size="small" checked={u.isAdmin} disabled={u.email === props.me} onChange={(on) => act(setAdminAction(u.email, on))} />
             ),
-          },
+          }] : []),
           { title: t("最近登入"), width: 170, render: (_, u) => time(u.lastSeenAt, locale) },
-          { title: t("操作"), width: 80, render: (_, u) => u.email === props.me ? null : (
+          ...(props.isAdmin ? [{ title: t("操作"), width: 80, render: (_: unknown, u: Props["users"][number]) => u.email === props.me ? null : (
             <Popconfirm title={t("刪除 {0}？", [u.email])} description={t("此帳號的所有組織及專案權限也會移除；再次登入會重新建立帳號；環境設定中的管理員仍會自動取得管理員權限。")} okText={t("刪除")} cancelText={t("取消")} onConfirm={() => act(deleteUserAction(u.email), t("帳號已刪除"))}>
               <Button size="small" type="link" danger>{t("刪除")}</Button>
             </Popconfirm>
-          ) },
+          ) }] : []),
         ]}
       />
     </div>
@@ -185,7 +190,8 @@ function Members(props: Props) {
 function Secrets(props: Props) {
   const { t, locale } = useI18n();
   const act = useAction();
-  const [form] = Form.useForm<{ name: string; value: string; description: string }>();
+  const [form] = Form.useForm<{ name: string; value: string; description: string; organizationId?: string }>();
+  const orgName = new Map(props.organizations.map((o) => [o.id, o.name]));
   const [grantForm] = Form.useForm<SecretGrant & { name: string }>();
   const projectLabel = (id: string) => {
     const project = props.projects.find((item) => item.id === id);
@@ -242,11 +248,22 @@ function Secrets(props: Props) {
           form={form}
           layout="inline"
           size="small"
+          initialValues={{ organizationId: props.isAdmin ? undefined : props.organizations[0]?.id }}
           onFinish={async (values) => {
             const r = await act(setSecretAction({ ...values, description: values.description ?? "" }), t("已儲存"));
-            if (r.ok) form.resetFields();
+            if (r.ok) form.resetFields(["name", "value", "description"]);
           }}
         >
+          {/* A credential belongs to one organization, whose managers may change it; an admin may leave it global. */}
+          <Form.Item name="organizationId" className={styles.field} rules={[{ required: !props.isAdmin }]}>
+            <Select
+              aria-label={t("所屬組織")}
+              placeholder={props.isAdmin ? t("全域（僅管理員）") : t("所屬組織")}
+              allowClear={props.isAdmin}
+              showSearch={{ optionFilterProp: "label" }}
+              options={props.organizations.map((o) => ({ value: o.id, label: o.name }))}
+            />
+          </Form.Item>
           <Form.Item name="name" className={styles.field} rules={[{ required: true }]}>
             <Input aria-label={t("名稱")} placeholder={t("名稱")} />
           </Form.Item>
@@ -296,6 +313,7 @@ function Secrets(props: Props) {
         columns={[
           { title: t("名稱"), dataIndex: "name", render: (n: string) => <code>{n}</code> },
           { title: t("說明"), dataIndex: "description" },
+          { title: t("所屬組織"), width: 200, render: (_, s) => s.organizationId ? (orgName.get(s.organizationId) ?? s.organizationId) : <Typography.Text type="secondary">{t("全域（僅管理員）")}</Typography.Text> },
           {
             title: t("MCP 憑證授權"),
             render: (_, secret) => (

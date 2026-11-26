@@ -48,6 +48,8 @@ kebbi-browser-backend ----------+----> OpenAI Responses API (inline config)
 
 `users` holds the Google email, display name, and an admin flag. `memberships` grants a user a role on one organization or one project; an organization role applies to all of its projects. Roles are `viewer` (read agents and history) and `editor` (also save, publish, archive). Admins manage memberships, secrets, and syncs, and can see everything. The initial admins come from an environment variable.
 
+An organization can also have managers: a membership with the `manager` role, which exists only on a whole organization. A manager has an editor's rights in every project of the organization and may open the admin area for that organization only. There they add, change and remove the organization's members (including other managers, but not themselves, so a manager cannot lock themselves out or raise their own role), and set, delete and grant the credentials the organization owns (`secrets.organization_id`); a credential can be granted only to projects of its own organization. They see only the organization's members, credentials and audit events (those about its agents, memberships and credentials). Everything else stays with admins: the admin flag, deleting accounts, the RCSL sync, global credentials (no owner) and the audit events of the whole system. The rules are in `src/lib/org-admin.ts` and are enforced in the server actions, not only in the page.
+
 `audit_events` records saves, publishes, archives, membership changes, and secret changes with actor and time.
 
 ## Runtime API

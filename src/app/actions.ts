@@ -15,7 +15,8 @@ import {
   setArchived,
   updateAgentMeta,
 } from "@/lib/agents";
-import { can, ForbiddenError, requireAdmin, requireProjectRole, requireUser } from "@/lib/authz";
+import { can, ForbiddenError, requireAdmin, requireManager, requireProjectRole, requireUser, type CurrentUser } from "@/lib/authz";
+import { canGrantSecret, canManageOrganization, canManageSecret, membershipOrganization, newSecretOwner, roleFitsScope } from "@/lib/org-admin";
 import { mcpServerUrl, validMcpCredentialField } from "@/lib/mcp-credentials";
 import { sanitizeTools, toRuntimeMessages } from "@/lib/openai-shape";
 import { syncFromRcsl } from "@/lib/rcsl";
@@ -163,17 +164,32 @@ export async function syncRcslAction() {
   });
 }
 
-export async function addMembershipAction(input: { email: string; scope: "organization" | "project"; scopeId: string; role: "viewer" | "editor" }) {
+/** The organization a project belongs to, or null when there is no such project. */
+async function organizationOfProject(projectId: string): Promise<string | null> {
+  const [project] = await db.select({ organizationId: projects.organizationId }).from(projects).where(eq(projects.id, projectId));
+  return project?.organizationId ?? null;
+}
+
+/** An organization manager's own access is changed by an admin, so a manager cannot lock themselves out or raise themselves. */
+function checkNotSelf(actor: CurrentUser, targetEmail: string) {
+  if (!actor.isAdmin && targetEmail === actor.email) throw new Error("不能修改自己的權限");
+}
+
+export async function addMembershipAction(input: { email: string; scope: "organization" | "project"; scopeId: string; role: "viewer" | "editor" | "manager" }) {
   return run(async () => {
-    const admin = await requireAdmin();
+    const admin = await requireManager();
     const parsed = z
       .object({
         email: z.string().trim().toLowerCase().email(),
         scope: z.enum(["organization", "project"]),
         scopeId: z.string().min(1),
-        role: z.enum(["viewer", "editor"]),
+        role: z.enum(["viewer", "editor", "manager"]),
       })
       .parse(input);
+    if (!roleFitsScope(parsed.scope, parsed.role)) throw new Error("組織管理者只能授予整個組織");
+    const organizationId = membershipOrganization(parsed.scope, parsed.scopeId, parsed.scope === "project" ? await organizationOfProject(parsed.scopeId) : null);
+    if (!canManageOrganization(admin.isAdmin, admin.managedOrgIds, organizationId)) throw new ForbiddenError();
+    checkNotSelf(admin, parsed.email);
     await db.insert(users).values({ email: parsed.email }).onConflictDoNothing();
     const scopeColumns =
       parsed.scope === "organization" ? { organizationId: parsed.scopeId } : { projectId: parsed.scopeId };
@@ -182,15 +198,23 @@ export async function addMembershipAction(input: { email: string; scope: "organi
       .insert(memberships)
       .values({ userEmail: parsed.email, role: parsed.role, ...scopeColumns })
       .onConflictDoUpdate({ target, set: { role: parsed.role } });
-    await db.insert(auditEvents).values({ actor: admin.email, action: "membership.set", targetType: "user", targetId: parsed.email, detail: parsed });
+    await db.insert(auditEvents).values({ actor: admin.email, action: "membership.set", targetType: "user", targetId: parsed.email, detail: { ...parsed, organizationId } });
     revalidatePath("/admin");
   });
 }
 
 export async function removeMembershipAction(id: number) {
   return run(async () => {
-    const admin = await requireAdmin();
-    const [removed] = await db.delete(memberships).where(eq(memberships.id, id)).returning();
+    const admin = await requireManager();
+    const removed = await db.transaction(async (tx) => {
+      const [current] = await tx.select().from(memberships).where(eq(memberships.id, id));
+      if (!current) return null;
+      const organizationId = current.organizationId ?? (current.projectId ? await organizationOfProject(current.projectId) : null);
+      if (!canManageOrganization(admin.isAdmin, admin.managedOrgIds, organizationId)) throw new ForbiddenError();
+      checkNotSelf(admin, current.userEmail);
+      await tx.delete(memberships).where(eq(memberships.id, id));
+      return { ...current, organizationId };
+    });
     if (removed) {
       await db.insert(auditEvents).values({ actor: admin.email, action: "membership.remove", targetType: "user", targetId: removed.userEmail, detail: { ...removed } });
     }
@@ -223,35 +247,54 @@ export async function setAdminAction(email: string, isAdmin: boolean) {
   });
 }
 
-export async function setSecretAction(input: { name: string; value: string; description: string }) {
+export async function setSecretAction(input: { name: string; value: string; description: string; organizationId?: string | null }) {
   return run(async () => {
-    const admin = await requireAdmin();
+    const admin = await requireManager();
     const parsed = z
       .object({
         name: z.string().regex(/^[A-Za-z0-9_.-]+$/, "只能用英數字、底線、點、減號"),
         value: z.string().min(1),
         description: z.string().max(500),
+        organizationId: z.string().nullish(),
       })
       .parse(input);
     const values = { ciphertext: encryptSecret(parsed.value), description: parsed.description, updatedBy: admin.email, updatedAt: new Date() };
-    await db.insert(secrets).values({ name: parsed.name, ...values }).onConflictDoUpdate({ target: secrets.name, set: values });
-    await db.insert(auditEvents).values({ actor: admin.email, action: "secret.set", targetType: "secret", targetId: parsed.name });
+    const owner = await db.transaction(async (tx) => {
+      const [existing] = await tx.select({ organizationId: secrets.organizationId }).from(secrets).where(eq(secrets.name, parsed.name)).for("update");
+      if (existing) {
+        // An existing secret keeps its owner; only someone who may manage it may change its value.
+        if (!canManageSecret(admin.isAdmin, admin.managedOrgIds, existing.organizationId)) throw new Error("這個憑證名稱已被使用");
+        await tx.update(secrets).set(values).where(eq(secrets.name, parsed.name));
+        return existing.organizationId;
+      }
+      const created = newSecretOwner(admin.isAdmin, admin.managedOrgIds, parsed.organizationId);
+      if (!created.ok) throw new Error("請選擇你管理的組織");
+      await tx.insert(secrets).values({ name: parsed.name, organizationId: created.owner, ...values });
+      return created.owner;
+    });
+    await db.insert(auditEvents).values({ actor: admin.email, action: "secret.set", targetType: "secret", targetId: parsed.name, detail: { organizationId: owner } });
     revalidatePath("/admin");
   });
 }
 
 export async function deleteSecretAction(name: string) {
   return run(async () => {
-    const admin = await requireAdmin();
-    await db.delete(secrets).where(and(eq(secrets.name, name)));
-    await db.insert(auditEvents).values({ actor: admin.email, action: "secret.delete", targetType: "secret", targetId: name });
+    const admin = await requireManager();
+    const owner = await db.transaction(async (tx) => {
+      const [existing] = await tx.select({ organizationId: secrets.organizationId }).from(secrets).where(eq(secrets.name, name)).for("update");
+      if (!existing) return null;
+      if (!canManageSecret(admin.isAdmin, admin.managedOrgIds, existing.organizationId)) throw new ForbiddenError();
+      await tx.delete(secrets).where(and(eq(secrets.name, name)));
+      return existing.organizationId;
+    });
+    await db.insert(auditEvents).values({ actor: admin.email, action: "secret.delete", targetType: "secret", targetId: name, detail: { organizationId: owner } });
     revalidatePath("/admin");
   });
 }
 
 export async function setSecretGrantAction(name: string, input: SecretGrant, enabled: boolean) {
   return run(async () => {
-    const admin = await requireAdmin();
+    const admin = await requireManager();
     const grant = z.strictObject({
       projectId: z.string().min(1),
       serverUrl: z.string().trim().transform((value) => mcpServerUrl(value))
@@ -261,8 +304,10 @@ export async function setSecretGrantAction(name: string, input: SecretGrant, ena
     const matches = (current: SecretGrant) => current.projectId === grant.projectId &&
       current.serverUrl === grant.serverUrl && current.field === grant.field;
     await db.transaction(async (tx) => {
-      const [secret] = await tx.select({ grants: secrets.grants }).from(secrets).where(eq(secrets.name, name)).for("update");
+      const [secret] = await tx.select({ grants: secrets.grants, organizationId: secrets.organizationId }).from(secrets).where(eq(secrets.name, name)).for("update");
       if (!secret) throw new Error("找不到憑證");
+      if (!canManageSecret(admin.isAdmin, admin.managedOrgIds, secret.organizationId)) throw new ForbiddenError();
+      if (enabled && !canGrantSecret(admin.isAdmin, admin.managedOrgIds, secret.organizationId, await organizationOfProject(grant.projectId))) throw new ForbiddenError();
       if (enabled) {
         const [project] = await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, grant.projectId));
         if (!project) throw new Error("專案不存在");
@@ -275,7 +320,7 @@ export async function setSecretGrantAction(name: string, input: SecretGrant, ena
         action: enabled ? "secret.grant" : "secret.revoke",
         targetType: "secret",
         targetId: name,
-        detail: grant,
+        detail: { ...grant, organizationId: secret.organizationId },
       });
     });
     revalidatePath("/admin");

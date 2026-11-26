@@ -16,7 +16,9 @@ import type { AgentSettings } from "@/lib/agent-settings";
 
 export type { AgentSettings };
 
-export const roleEnum = pgEnum("role", ["viewer", "editor"]);
+// "manager" is an organization-only role: it can do what an editor can in every project of the organization and
+// also manages the organization's members and credentials (docs/design.md, Authorization).
+export const roleEnum = pgEnum("role", ["viewer", "editor", "manager"]);
 
 export const organizations = pgTable("organizations", {
   id: text("id").primaryKey(), // RCSL organization_id (org-...)
@@ -126,6 +128,8 @@ export const secrets = pgTable("secrets", {
   description: text("description").notNull().default(""),
   ciphertext: text("ciphertext").notNull(),
   grants: jsonb("grants").$type<SecretGrant[]>().notNull().default([]),
+  /** The organization that owns the secret and whose managers may change it; null means only admins may. */
+  organizationId: text("organization_id").references(() => organizations.id),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

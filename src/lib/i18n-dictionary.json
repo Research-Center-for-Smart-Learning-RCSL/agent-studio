@@ -557,7 +557,14 @@
     "珍珠奶茶": "bubble tea",
     "珍": "bub",
     "有前者、沒有後者；也可寫成「{0}」": "The first but not the second; also written as {0}",
-    "找以「{0}」開頭的詞": "Finds words starting with {0}"
+    "找以「{0}」開頭的詞": "Finds words starting with {0}",
+    "組織管理者": "Organization manager",
+    "不能修改自己的權限": "You cannot change your own access",
+    "組織管理者只能授予整個組織": "The organization manager role applies to a whole organization only",
+    "這個憑證名稱已被使用": "This credential name is already in use",
+    "請選擇你管理的組織": "Choose an organization you manage",
+    "所屬組織": "Organization",
+    "全域（僅管理員）": "Global (admins only)"
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1117,6 +1124,13 @@
     "珍珠奶茶": "bubble tea",
     "珍": "bub",
     "有前者、沒有後者；也可寫成「{0}」": "Pierwsze, ale nie drugie; można też zapisać jako {0}",
-    "找以「{0}」開頭的詞": "Znajduje słowa zaczynające się od {0}"
+    "找以「{0}」開頭的詞": "Znajduje słowa zaczynające się od {0}",
+    "組織管理者": "Administrator organizacji",
+    "不能修改自己的權限": "Nie możesz zmienić własnych uprawnień",
+    "組織管理者只能授予整個組織": "Rola administratora organizacji dotyczy tylko całej organizacji",
+    "這個憑證名稱已被使用": "Ta nazwa poświadczenia jest już używana",
+    "請選擇你管理的組織": "Wybierz organizację, którą zarządzasz",
+    "所屬組織": "Organizacja",
+    "全域（僅管理員）": "Globalne (tylko administratorzy)"
   }
 }
