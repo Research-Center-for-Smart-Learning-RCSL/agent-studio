@@ -528,6 +528,8 @@
 .panePage { padding: 8px; }
 .paneFilters :global(.ant-select), .paneFilters input[type="date"] { max-width: 100%; }
 .paneFilters .search { flex: 1 1 100%; max-width: none; min-width: 0; }
+/* Beside a record the filters share rows instead of each taking a line. */
+.paneFilters > div > div > :not(.search) { flex: 1 1 110px; width: auto !important; min-width: 0; }
 .paneRow { min-width: 0; display: grid; gap: 2px; }
 .paneHead { display: flex; flex-flow: row wrap; gap: 2px 8px; align-items: baseline; font-size: 13px; }
 .paneAgent { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
