@@ -105,7 +105,7 @@ function Members(props: Props) {
                 { value: "organization", label: t("整個組織") },
                 { value: "project", label: t("單一專案") },
               ]}
-              onChange={() => form.setFieldValue("scopeId", undefined)}
+              onChange={() => { form.setFieldValue("scopeId", undefined); form.setFieldValue("role", "editor"); }}
             />
           </Form.Item>
           <Form.Item name="scopeId" className={styles.scope} rules={[{ required: true }]}>
@@ -157,7 +157,7 @@ function Members(props: Props) {
                     <Tag
                       key={m.id}
                       color={m.role === "manager" ? "gold" : m.role === "editor" ? "green" : "default"}
-                      closable
+                      closable={props.isAdmin || m.userEmail !== props.me}
                       onClose={(e) => {
                         e.preventDefault();
                         act(removeMembershipAction(m.id), t("已移除"));

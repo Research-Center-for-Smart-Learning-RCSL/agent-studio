@@ -29,6 +29,12 @@ export function ConversationView({ id, listPath = "/logs" }: { id: string; listP
   const search = useSearchParams();
   const focus = search.get("turn");
   const [start, setStart] = useState<Params>({});
+  // A jump (first, latest, go to) belongs to the record and turn it was made on; moving to another turn starts from that turn.
+  const [startFor, setStartFor] = useState(`${id}:${focus}`);
+  if (startFor !== `${id}:${focus}`) {
+    setStartFor(`${id}:${focus}`);
+    setStart({});
+  }
   const startKey = JSON.stringify(start);
   const key = JSON.stringify([id, focus, start, scope]);
   const [state, setState] = useState<Loaded | null>(null);
@@ -90,15 +96,17 @@ export function ConversationView({ id, listPath = "/logs" }: { id: string; listP
   const total = items[0]?.conversation_turns ?? items.length;
   const head = items[0];
   // The name is made from the conversation's first turn, which may lie outside the window being shown.
-  const windowStartsAtFirst = current !== null && !current.error && current.prev === null;
+  const loaded = current !== null && !current.error;
+  const windowStartsAtFirst = loaded && current.prev === null;
+  const hasEarlier = loaded && current.prev !== null;
   const [first, setFirst] = useState<{ id: string; at: string | null } | null>(null);
   useEffect(() => {
-    if (!ready || current === null || current.error || current.prev === null) return;
+    if (!ready || !hasEarlier) return;
     const controller = new AbortController();
     logsGet<ConversationTurnPage>(`/v1/conversations/${encodeURIComponent(id)}/turns`, { seq: 1, limit: 1 }, scope, controller.signal)
       .then((page) => setFirst({ id, at: page.items[0]?.started_at ?? null }), () => undefined);
     return () => controller.abort();
-  }, [id, ready, scope, current]);
+  }, [id, ready, scope, hasEarlier]);
   const startedAt = windowStartsAtFirst ? head?.started_at : first?.id === id ? first.at : undefined;
   const defaultTitle = startedAt === undefined ? id : defaultConversationName(head?.agent, startedAt, locale === "zh-Hant" ? "zh-TW" : "en");
   const missing = focus != null && startKey === "{}" && current !== null && !current.error && !items.some((turn) => turn.id === focus);

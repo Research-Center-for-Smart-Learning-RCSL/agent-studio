@@ -43,10 +43,21 @@ export function titleAsName(title: string, format: string): string {
  */
 export function defaultConversationName(agent: string | null | undefined, startedAt: string | null | undefined, language: "zh-TW" | "en"): string {
   const kind = language === "en" ? "conversation" : "對話";
-  const part = agent ? titleAsName(agent, "xlsx").replace(DOTS, "-").slice(0, 60).trim() : "";
+  // The server's _part: made safe and cut to 60 characters (code points), nothing stripped from its ends but spaces.
+  const part = agent ? [...plainName(agent).replace(DOTS, "-")].slice(0, 60).join("").trim() : "";
   const when = startedAt ? `${startedAt.slice(0, 10)}-${startedAt.slice(11, 13)}${startedAt.slice(14, 16)}` : "";
-  return titleAsName([kind, part, when].filter(Boolean).join("_"), "xlsx");
+  const tail = when;
+  let described = [kind, part].filter(Boolean).join("_");
+  // The kind and agent give way to the time, so the name stays within the server's byte limit.
+  const room = MAX_NAME_BYTES - byteLength(tail) - 1;
+  while (byteLength(described) > room && described.length > 0) described = [...described].slice(0, -1).join("");
+  described = rstrip(described, " _-");
+  return titleAsName(tail ? `${described}_${tail}` : described, "xlsx");
 }
+
+const MAX_NAME_BYTES = 150;
+const byteLength = (s: string) => new TextEncoder().encode(s).length;
+const plainName = (s: string) => [...s.normalize("NFC")].map((c) => (/\s/u.test(c) ? " " : c)).filter((c) => !/\p{C}/u.test(c)).join("").replace(UNSAFE, "-").split(" ").filter(Boolean).join(" ");
 
 type Translate = (key: string, values?: unknown[]) => string;
 

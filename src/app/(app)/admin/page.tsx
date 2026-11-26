@@ -35,7 +35,7 @@ export default async function AdminPage() {
           left join projects ap on ap.id = ag.project_id
           left join projects dp on dp.id = e.detail->>'projectId'
           left join projects sp on sp.id = e.detail->>'scopeId'
-          where ap.organization_id in (${orgList}) or dp.organization_id in (${orgList}) or sp.organization_id in (${orgList})
+          where ap.organization_id in (${orgList}) or (e.target_type <> 'secret' and dp.organization_id in (${orgList})) or sp.organization_id in (${orgList})
              or e.detail->>'organizationId' in (${orgList}) or e.detail->>'scopeId' in (${orgList})
           order by e.id desc limit 200`).then((r) => r.rows)
       : db.select().from(auditEvents).orderBy(desc(auditEvents.id)).limit(200),
@@ -74,11 +74,16 @@ export default async function AdminPage() {
       me={user.email}
       isAdmin={user.isAdmin}
       managedOrgIds={orgIds}
-      users={userRows.map((u) => ({ email: u.email, name: u.name, isAdmin: u.isAdmin, lastSeenAt: u.lastSeenAt?.toISOString() ?? null }))}
+      users={userRows.map((u) => ({ email: u.email, name: u.name, isAdmin: scoped ? false : u.isAdmin, lastSeenAt: u.lastSeenAt?.toISOString() ?? null }))}
       memberships={membershipRows.map((m) => ({ id: m.id, userEmail: m.userEmail, organizationId: m.organizationId, projectId: m.projectId, role: m.role }))}
       organizations={orgRows.map((o) => ({ id: o.id, name: o.name, active: o.active }))}
       projects={projectRows.map((p) => ({ id: p.id, name: p.name, organizationId: p.organizationId, active: p.active }))}
-      secrets={secretRows.map((s) => ({ ...s, updatedAt: s.updatedAt.toISOString() }))}
+      secrets={secretRows.map((s) => ({
+        ...s,
+        // A grant to a project outside the manager's organizations is the admin's business, not theirs.
+        grants: scoped ? s.grants.filter((g) => scopedProjects.includes(g.projectId)) : s.grants,
+        updatedAt: s.updatedAt.toISOString(),
+      }))}
       audit={auditRows.map((a) => ({ ...a, createdAt: new Date(a.createdAt).toISOString() }))}
       mcpWithoutSecret={mcpWithoutSecret}
       unapprovedReferences={unapprovedReferences}

@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Empty, Spin, Table, type TableColumnsType } from "antd";
@@ -25,6 +26,9 @@ export function TurnList({ pane = false, selected = null }: { pane?: boolean; se
   void _kind;
   const robotName = useRobotLabel();
   const list = usePagedLogs<Turn>("/v1/turns", { ...turnFilters, limit: 50 }, !bad);
+  useEffect(() => {
+    if (pane) document.querySelector(`.${styles.selectedRow}`)?.scrollIntoView({ block: "nearest" });
+  }, [pane, openTurn]);
   const empty = !list.loading && !list.error && list.items.length === 0;
   // Switching between records replaces the entry, so Back does not step through every turn looked at.
   const replace = selected !== null;

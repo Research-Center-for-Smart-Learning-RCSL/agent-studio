@@ -44,4 +44,15 @@ describe("defaultConversationName", () => {
     expect(defaultConversationName(null, "2026-11-20T03:01:00+08:00", "zh-TW")).toBe("對話_2026-11-20-0301");
     expect(defaultConversationName("a/b: v1.2", null, "en")).toBe("conversation_a-b- v1-2");
   });
+
+  it("treats the agent as the server does: dots become dashes, nothing else is stripped", () => {
+    expect(defaultConversationName(".", "2026-11-20T03:01:00+08:00", "zh-TW")).toBe("對話_2026-11-20-0301");
+    expect(defaultConversationName("foo.xlsx", "2026-11-20T03:01:00+08:00", "en")).toBe("conversation_foo-xlsx_2026-11-20-0301");
+  });
+
+  it("shortens a long agent name so the whole name stays within 150 bytes and keeps the time", () => {
+    const name = defaultConversationName("長".repeat(60), "2026-11-20T03:01:00+08:00", "zh-TW");
+    expect(new TextEncoder().encode(name).length).toBeLessThanOrEqual(150);
+    expect(name.endsWith("_2026-11-20-0301")).toBe(true);
+  });
 });

@@ -564,7 +564,8 @@
     "這個憑證名稱已被使用": "This credential name is already in use",
     "請選擇你管理的組織": "Choose an organization you manage",
     "所屬組織": "Organization",
-    "全域（僅管理員）": "Global (admins only)"
+    "全域（僅管理員）": "Global (admins only)",
+    "這個憑證已屬於其他組織，不能更改所屬組織": "This credential already belongs to another organization; its organization cannot be changed here"
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1131,6 +1132,7 @@
     "這個憑證名稱已被使用": "Ta nazwa poświadczenia jest już używana",
     "請選擇你管理的組織": "Wybierz organizację, którą zarządzasz",
     "所屬組織": "Organizacja",
-    "全域（僅管理員）": "Globalne (tylko administratorzy)"
+    "全域（僅管理員）": "Globalne (tylko administratorzy)",
+    "這個憑證已屬於其他組織，不能更改所屬組織": "To poświadczenie należy już do innej organizacji; nie można tu zmienić jej przypisania"
   }
 }

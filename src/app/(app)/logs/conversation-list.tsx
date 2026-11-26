@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Empty, Spin, Table, type TableColumnsType } from "antd";
@@ -29,6 +29,10 @@ export function ConversationList({ pane = false, selected = null }: { pane?: boo
   const list = usePagedLogs<ConversationSummary>("/v1/conversations", { ...conversationFilters, limit: 50 }, !bad);
   const rowOpen = useRowOpen(replace);
   const [checked, setChecked] = useState<string[]>([]);
+  useEffect(() => {
+    // Moving through the rows with the arrow keys keeps the selected one in view.
+    if (pane) document.querySelector(`.${styles.selectedRow}`)?.scrollIntoView({ block: "nearest" });
+  }, [pane, selected]);
   const empty = !list.loading && !list.error && list.items.length === 0;
   const keys = (event: React.KeyboardEvent<HTMLElement>) => {
     // Up and Down move through the rows while a conversation is open beside the list.

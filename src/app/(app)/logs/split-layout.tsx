@@ -45,8 +45,9 @@ const columns = (share: number) =>
 
 function snapShare(share: number, width: number): number {
   const px = share * width;
-  if (px < MIN_LIST_PX) return 0;
-  if (width - px < MIN_DETAIL_PX) return 1;
+  // Half a pixel of slack: a share worked out from a minimum width must not round back under it.
+  if (px < MIN_LIST_PX - 0.5) return 0;
+  if (width - px < MIN_DETAIL_PX - 0.5) return 1;
   return share;
 }
 
@@ -131,6 +132,8 @@ function SplitDivider({ share, onPreview, onChange, onClose }: {
 }) {
   const { t } = useI18n();
   const drag = useRef<{ last?: number } | null>(null);
+  // The divider can go away mid-drag (the window narrows, a route changes); the preview must not outlive it.
+  useEffect(() => () => onPreview(null), [onPreview]);
   const boxOf = (el: HTMLElement) => el.parentElement?.getBoundingClientRect() ?? null;
   const move = (event: PointerEvent<HTMLDivElement>) => {
     const box = boxOf(event.currentTarget);
@@ -164,7 +167,7 @@ function SplitDivider({ share, onPreview, onChange, onClose }: {
       aria-valuenow={Math.round(share * 100)}
       tabIndex={0}
       onPointerDown={(event) => {
-        if ((event.target as HTMLElement).closest("button")) return;
+        if (event.button !== 0 || (event.target as HTMLElement).closest("button")) return;
         drag.current = {};
         event.currentTarget.setPointerCapture(event.pointerId);
       }}

@@ -30,7 +30,12 @@ export function useUrlFilters() {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [pathname, router, search]);
   const params = useMemo(() => filterParams(filters), [filters]);
-  return { filters, params, set, reset: () => router.replace(pathname, { scroll: false }), bad: badRange(filters) };
+  // Clearing the filters keeps the record open beside the list (the turn it was opened on).
+  const reset = () => {
+    const turn = search.get("turn");
+    router.replace(turn ? `${pathname}?turn=${encodeURIComponent(turn)}` : pathname, { scroll: false });
+  };
+  return { filters, params, set, reset, bad: badRange(filters) };
 }
 
 /** Text that is applied on Enter or when it loses focus, not on every keystroke. */

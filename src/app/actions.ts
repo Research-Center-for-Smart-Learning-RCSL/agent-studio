@@ -206,6 +206,7 @@ export async function addMembershipAction(input: { email: string; scope: "organi
 export async function removeMembershipAction(id: number) {
   return run(async () => {
     const admin = await requireManager();
+    id = z.number().int().min(1).max(2_147_483_647).parse(id);
     const removed = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(memberships).where(eq(memberships.id, id));
       if (!current) return null;
@@ -264,6 +265,8 @@ export async function setSecretAction(input: { name: string; value: string; desc
       if (existing) {
         // An existing secret keeps its owner; only someone who may manage it may change its value.
         if (!canManageSecret(admin.isAdmin, admin.managedOrgIds, existing.organizationId)) throw new Error("這個憑證名稱已被使用");
+        // The form's organization would otherwise be silently ignored for a secret that already has an owner.
+        if (parsed.organizationId && parsed.organizationId !== existing.organizationId) throw new Error("這個憑證已屬於其他組織，不能更改所屬組織");
         await tx.update(secrets).set(values).where(eq(secrets.name, parsed.name));
         return existing.organizationId;
       }
@@ -280,6 +283,7 @@ export async function setSecretAction(input: { name: string; value: string; desc
 export async function deleteSecretAction(name: string) {
   return run(async () => {
     const admin = await requireManager();
+    name = z.string().min(1).max(200).parse(name);
     const owner = await db.transaction(async (tx) => {
       const [existing] = await tx.select({ organizationId: secrets.organizationId }).from(secrets).where(eq(secrets.name, name)).for("update");
       if (!existing) return null;
@@ -295,6 +299,7 @@ export async function deleteSecretAction(name: string) {
 export async function setSecretGrantAction(name: string, input: SecretGrant, enabled: boolean) {
   return run(async () => {
     const admin = await requireManager();
+    name = z.string().min(1).max(200).parse(name);
     const grant = z.strictObject({
       projectId: z.string().min(1),
       serverUrl: z.string().trim().transform((value) => mcpServerUrl(value))
