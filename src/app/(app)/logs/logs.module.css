@@ -479,7 +479,10 @@
 }
 
 /* A list with its open record beside it (SplitLayout); each side scrolls on its own. */
-.splitOn { display: grid; grid-template-columns: 34% auto minmax(0, 1fr); height: calc(100dvh - var(--split-top, 0px) - 12px); }
+/* The shell pads the page by 48px below; the negative margin lets the panes use that space so the page itself does not scroll. */
+.splitOn { display: grid; grid-template-columns: 34% auto minmax(0, 1fr); height: calc(100dvh - var(--split-top, 0px)); margin-block-end: -48px; }
+/* The title and mascot give way to the panes, as the old site's page title did. */
+.page:has(.splitOn) > .masthead { display: none; }
 .splitOn > * { overflow: auto; min-height: 0; }
 .splitDragging { user-select: none; cursor: col-resize; }
 .splitOn > .splitDetail { position: relative; padding-inline-start: 40px; }
