@@ -105,5 +105,8 @@
   box-shadow: 0 -4px 18px #2b405326;
 }
 
+/* The floating music button sits at the bottom right; keep the submit button clear of it. */
+.page :global(.ant-card).dockCard > :global(.ant-card-body) { padding-inline-end: 64px; }
+
 .memberships { max-width: 640px; }
 .memberships :global(.ant-tag) { margin-inline-end: 0; white-space: normal; overflow-wrap: anywhere; }
