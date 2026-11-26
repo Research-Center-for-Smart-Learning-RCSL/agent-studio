@@ -1,17 +1,17 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Empty, Spin } from "antd";
+import { Empty, Spin, Table, type TableColumnsType } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { wallClock } from "@/lib/logs-format";
 import type { Turn } from "@/lib/logs-types";
 import { ListExport, useRobotLabel } from "./export-control";
 import { usePagedLogs } from "./logs-client";
 import { FilterBar, useUrlFilters } from "./logs-filters";
-import { ErrorNote, Highlight, LoadMore, RuntimeTag, StatusTag, useRowOpen } from "./logs-ui";
+import { ErrorNote, Highlight, LoadMore, OpenLink, RuntimeTag, StatusTag, useRowOpen } from "./logs-ui";
 import styles from "./logs.module.css";
 import { listSearchOf } from "./split-layout";
-import { TurnCard, conversationHref } from "./turn-card";
+import { conversationHref } from "./turn-card";
 
 /** The list of turns. `pane` is true when a turn's conversation is open beside it; `selected` is that conversation. */
 export function TurnList({ pane = false, selected = null }: { pane?: boolean; selected?: string | null }) {
@@ -40,6 +40,30 @@ export function TurnList({ pane = false, selected = null }: { pane?: boolean; se
     event.preventDefault();
     router.replace(hrefOf(openable[next])!, { scroll: false });
   };
+  const columns: TableColumnsType<Turn> = [
+    {
+      title: t("時間"),
+      dataIndex: "started_at",
+      render: (value: string, turn) => {
+        const href = hrefOf(turn);
+        return href ? <Link href={href}>{wallClock(value)}</Link> : wallClock(value);
+      },
+    },
+    { title: t("狀態"), dataIndex: "status", render: (value: string) => <StatusTag status={value} /> },
+    { title: t("執行環境"), render: (_: unknown, turn) => <RuntimeTag endpoint={turn.endpoint} robotSerial={turn.robot_serial} robotName={turn.robot_name} /> },
+    { title: "Agent", dataIndex: "agent", render: (value: string | null) => value ?? "" },
+    {
+      title: t("使用者"),
+      width: 280,
+      render: (_: unknown, turn) => turn.input_text ? <div className={styles.clip}><Highlight text={turn.input_text} query={filters.q} /></div> : null,
+    },
+    {
+      title: t("助理"),
+      width: 280,
+      render: (_: unknown, turn) => turn.output_text ? <div className={styles.clip}><Highlight text={turn.output_text} query={filters.q} /></div> : null,
+    },
+    { title: "", fixed: "right" as const, render: (_: unknown, turn) => { const href = hrefOf(turn); return href ? <OpenLink href={href} /> : null; } },
+  ];
   return (
     <div className={`${styles.page}${pane ? ` ${styles.panePage}` : ""}`} tabIndex={-1} onKeyDown={keys}>
       <div className={pane ? styles.paneFilters : undefined}>
@@ -49,9 +73,19 @@ export function TurnList({ pane = false, selected = null }: { pane?: boolean; se
       {list.loading && !bad && <Spin />}
       {empty && !bad && <Empty description={t("沒有符合的回合")} />}
       {list.items.length > 0 && !pane && <ListExport filter={turnFilters} robotName={robotName} />}
-      {list.items.map((turn) => {
+      {list.items.length > 0 && !pane && (
+        <Table<Turn>
+          rowKey="id"
+          size="small"
+          pagination={false}
+          dataSource={list.items}
+          scroll={{ x: "max-content" }}
+          onRow={(turn) => rowOpen(hrefOf(turn) ?? null)}
+          columns={columns}
+        />
+      )}
+      {pane && list.items.map((turn) => {
         const href = hrefOf(turn);
-        if (!pane) return <TurnCard key={turn.id} turn={turn} query={filters.q} showConversation openHref={href} />;
         const text = turn.input_text ?? turn.output_text ?? "";
         return (
           <div key={turn.id} onClick={rowOpen(href ?? null).onClick} className={`${styles.paneRow} ${styles.turnRow}${turn.id === openTurn && turn.conversation === selected ? ` ${styles.selectedRow}` : ""}`}>
