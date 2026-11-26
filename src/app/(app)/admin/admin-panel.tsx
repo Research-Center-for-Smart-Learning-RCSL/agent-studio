@@ -139,7 +139,7 @@ function Members(props: Props) {
         </Form>
       </Card>
       <Table
-        scroll={{ x: "max-content" }}
+        scroll={{ x: 720 }}
         rowKey="email"
         size="small"
         dataSource={props.users}
@@ -148,8 +148,9 @@ function Members(props: Props) {
           { title: t("帳號"), dataIndex: "email", render: (e: string, u) => <Space orientation="vertical" size={0}>{e}<Typography.Text type="secondary" style={{ fontSize: 12 }}>{u.name}</Typography.Text></Space> },
           {
             title: t("權限"),
+            // Memberships wrap onto new lines: a person with many would otherwise stretch the table far to the right.
             render: (_, u) => (
-              <Space wrap size={4}>
+              <Space wrap size={[4, 6]} className={styles.memberships}>
                 {props.memberships
                   .filter((m) => m.userEmail === u.email)
                   .map((m) => (

@@ -87,3 +87,6 @@
     min-height: 32px;
   }
 }
+
+.memberships { max-width: 640px; }
+.memberships :global(.ant-tag) { margin-inline-end: 0; white-space: normal; overflow-wrap: anywhere; }
