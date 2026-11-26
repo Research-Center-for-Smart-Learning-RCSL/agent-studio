@@ -163,6 +163,9 @@ a {
   text-align: center;
 }
 
+.login-robot { display: flex; justify-content: center; }
+.login-robot > div { flex: 0 0 auto; width: 128px; }
+
 .login-card h1 {
   margin: 12px 0 4px;
   font-size: 30px;

@@ -2,6 +2,7 @@ import { LanguageSelect } from "@/lib/i18n-client";
 import { getTranslator } from "@/lib/i18n-server";
 import { redirect } from "next/navigation";
 import { auth, devLoginEnabled, signIn } from "@/auth";
+import { DirectoryRobot } from "../(app)/directory-robot";
 
 export default async function LoginPage() {
   const t = await getTranslator();
@@ -12,7 +13,7 @@ export default async function LoginPage() {
     <main className="studio-login">
       <section className="studio-panel login-card" aria-labelledby="login-title">
         <LanguageSelect />
-        <span className="studio-mark" aria-hidden="true" />
+        <div className="login-robot"><DirectoryRobot variant="directory" greeting /></div>
         <h1 id="login-title">RCSL Agent Studio</h1>
         <p>{t("RCSL agent 編輯與版本管理")}</p>
         <form
