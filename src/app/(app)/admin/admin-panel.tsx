@@ -42,13 +42,14 @@ export function AdminPanel(props: Props) {
   const { t } = useI18n();
   return (
     <App className={styles.page}>
-      <div className={styles.masthead}>
-        <h1 className={styles.title}>{t("管理")}</h1>
-        <DirectoryRobot variant="admin" />
-      </div>
       <Tabs
         size="small"
         tabBarGutter={16}
+        // Title, tabs and mascot share one row, so the page below gets the height.
+        tabBarExtraContent={{
+          left: <h1 className={styles.title}>{t("管理")}</h1>,
+          right: <DirectoryRobot variant="admin" size="compact" />,
+        }}
         items={[
           { key: "members", label: t("成員與權限"), children: <Members {...props} /> },
           { key: "secrets", label: t("憑證"), children: <Secrets {...props} /> },
@@ -85,7 +86,53 @@ function Members(props: Props) {
 
   return (
     <div className={styles.stack}>
-      <Card size="small" title={t("授權")} className={styles.card}>
+      <Table
+        scroll={{ x: 720 }}
+        rowKey="email"
+        size="small"
+        dataSource={props.users}
+        pagination={false}
+        columns={[
+          { title: t("帳號"), dataIndex: "email", render: (e: string, u) => <Space orientation="vertical" size={0}>{e}<Typography.Text type="secondary" style={{ fontSize: 12 }}>{u.name}</Typography.Text></Space> },
+          {
+            title: t("權限"),
+            // Memberships wrap onto new lines: a person with many would otherwise stretch the table far to the right.
+            render: (_, u) => (
+              <Space wrap size={[4, 6]} className={styles.memberships}>
+                {props.memberships
+                  .filter((m) => m.userEmail === u.email)
+                  .map((m) => (
+                    <Tag
+                      key={m.id}
+                      color={m.role === "manager" ? "gold" : m.role === "editor" ? "green" : "default"}
+                      closable={props.isAdmin || m.userEmail !== props.me}
+                      onClose={(e) => {
+                        e.preventDefault();
+                        act(removeMembershipAction(m.id), t("已移除"));
+                      }}
+                    >
+                      {m.organizationId ? t("組織：{0}", [orgName.get(m.organizationId)]) : t("專案：{0}", [projectName.get(m.projectId!)])}（{m.role === "manager" ? t("組織管理者") : m.role === "editor" ? t("編輯") : t("檢視")}）
+                    </Tag>
+                  ))}
+              </Space>
+            ),
+          },
+          ...(props.isAdmin ? [{
+            title: t("管理員"),
+            width: 90,
+            render: (_: unknown, u: Props["users"][number]) => (
+              <Switch size="small" checked={u.isAdmin} disabled={u.email === props.me} onChange={(on) => act(setAdminAction(u.email, on))} />
+            ),
+          }] : []),
+          { title: t("最近登入"), width: 170, render: (_, u) => time(u.lastSeenAt, locale) },
+          ...(props.isAdmin ? [{ title: t("操作"), width: 80, render: (_: unknown, u: Props["users"][number]) => u.email === props.me ? null : (
+            <Popconfirm title={t("刪除 {0}？", [u.email])} description={t("此帳號的所有組織及專案權限也會移除；再次登入會重新建立帳號；環境設定中的管理員仍會自動取得管理員權限。")} okText={t("刪除")} cancelText={t("取消")} onConfirm={() => act(deleteUserAction(u.email), t("帳號已刪除"))}>
+              <Button size="small" type="link" danger>{t("刪除")}</Button>
+            </Popconfirm>
+          ) }] : []),
+        ]}
+      />
+      <Card size="small" title={t("授權")} className={`${styles.card} ${styles.dockCard}`}>
         <Form
           className={styles.form}
           form={form}
@@ -139,52 +186,6 @@ function Members(props: Props) {
             {t("授權")}</Button>
         </Form>
       </Card>
-      <Table
-        scroll={{ x: 720 }}
-        rowKey="email"
-        size="small"
-        dataSource={props.users}
-        pagination={false}
-        columns={[
-          { title: t("帳號"), dataIndex: "email", render: (e: string, u) => <Space orientation="vertical" size={0}>{e}<Typography.Text type="secondary" style={{ fontSize: 12 }}>{u.name}</Typography.Text></Space> },
-          {
-            title: t("權限"),
-            // Memberships wrap onto new lines: a person with many would otherwise stretch the table far to the right.
-            render: (_, u) => (
-              <Space wrap size={[4, 6]} className={styles.memberships}>
-                {props.memberships
-                  .filter((m) => m.userEmail === u.email)
-                  .map((m) => (
-                    <Tag
-                      key={m.id}
-                      color={m.role === "manager" ? "gold" : m.role === "editor" ? "green" : "default"}
-                      closable={props.isAdmin || m.userEmail !== props.me}
-                      onClose={(e) => {
-                        e.preventDefault();
-                        act(removeMembershipAction(m.id), t("已移除"));
-                      }}
-                    >
-                      {m.organizationId ? t("組織：{0}", [orgName.get(m.organizationId)]) : t("專案：{0}", [projectName.get(m.projectId!)])}（{m.role === "manager" ? t("組織管理者") : m.role === "editor" ? t("編輯") : t("檢視")}）
-                    </Tag>
-                  ))}
-              </Space>
-            ),
-          },
-          ...(props.isAdmin ? [{
-            title: t("管理員"),
-            width: 90,
-            render: (_: unknown, u: Props["users"][number]) => (
-              <Switch size="small" checked={u.isAdmin} disabled={u.email === props.me} onChange={(on) => act(setAdminAction(u.email, on))} />
-            ),
-          }] : []),
-          { title: t("最近登入"), width: 170, render: (_, u) => time(u.lastSeenAt, locale) },
-          ...(props.isAdmin ? [{ title: t("操作"), width: 80, render: (_: unknown, u: Props["users"][number]) => u.email === props.me ? null : (
-            <Popconfirm title={t("刪除 {0}？", [u.email])} description={t("此帳號的所有組織及專案權限也會移除；再次登入會重新建立帳號；環境設定中的管理員仍會自動取得管理員權限。")} okText={t("刪除")} cancelText={t("取消")} onConfirm={() => act(deleteUserAction(u.email), t("帳號已刪除"))}>
-              <Button size="small" type="link" danger>{t("刪除")}</Button>
-            </Popconfirm>
-          ) }] : []),
-        ]}
-      />
     </div>
   );
 }
@@ -229,7 +230,7 @@ function Secrets(props: Props) {
       {props.mcpWithoutSecret.length > 0 && (
         <Alert
           type="warning"
-          title={t("以下發布中的 agent 有 MCP 工具但沒有設定憑證。從 OpenAI 匯入時拿不到 MCP 的授權資訊，如果該伺服器需要授權，請在工具設定中加上憑證參照。")}
+          title={t("以下發布中的 agent 有 MCP 工具但沒有設定憑證。如果該伺服器需要授權，請在工具設定中加上憑證參照。")}
           description={
             <ul style={{ margin: 0 }}>
               {props.mcpWithoutSecret.map((a) => (

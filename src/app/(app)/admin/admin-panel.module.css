@@ -1,5 +1,5 @@
 :global(.studio-main):has(> .page) {
-  padding-block-start: clamp(12px, 2vw, 22px);
+  padding-block-start: 6px;
 }
 
 .title {
@@ -8,13 +8,19 @@
   line-height: 1.2;
 }
 
-.masthead {
-  --robot-focus-color: var(--studio-accent);
+.page { --robot-focus-color: var(--studio-accent); }
+
+.page :global(.ant-tabs-nav) {
+  align-items: center;
+}
+
+.page :global(.ant-tabs-extra-content) {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 72px;
-  padding-inline: 4px;
+}
+
+.page :global(.ant-tabs-extra-content):first-child {
+  margin-inline-end: 18px;
 }
 
 .page :global(.ant-tabs-nav) {
@@ -86,6 +92,14 @@
   .page .form :global(.ant-select) {
     min-height: 32px;
   }
+}
+
+/* The grant form floats at the bottom of the screen and rests after the table once the end is reached. */
+.dockCard {
+  position: sticky;
+  bottom: 8px;
+  z-index: 5;
+  box-shadow: 0 -4px 18px #2b405326;
 }
 
 .memberships { max-width: 640px; }

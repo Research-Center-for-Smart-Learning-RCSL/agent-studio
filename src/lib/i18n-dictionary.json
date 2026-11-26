@@ -575,7 +575,8 @@
     "讓模型以程式碼組合並呼叫其他已啟用的工具。": "Lets the model combine and call the other enabled tools from code.",
     "自訂函式：由你定義名稱與參數，模型可以呼叫；執行環境需要有對應的處理程式才會真的執行。": "Custom function: you define its name and parameters and the model can call it; the runtime needs a matching handler for it to actually run.",
     "工具類型：{0}": "Tool type: {0}",
-    "工具說明": "Tool description"
+    "工具說明": "Tool description",
+    "以下發布中的 agent 有 MCP 工具但沒有設定憑證。如果該伺服器需要授權，請在工具設定中加上憑證參照。": "These published agents have MCP tools but no credential configured. If the server needs authorization, add a credential reference in the tool settings."
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1153,6 +1154,7 @@
     "讓模型以程式碼組合並呼叫其他已啟用的工具。": "Pozwala modelowi łączyć i wywoływać inne włączone narzędzia z poziomu kodu.",
     "自訂函式：由你定義名稱與參數，模型可以呼叫；執行環境需要有對應的處理程式才會真的執行。": "Funkcja niestandardowa: definiujesz nazwę i parametry, a model może ją wywołać; środowisko musi mieć odpowiedni handler, aby działała.",
     "工具類型：{0}": "Typ narzędzia: {0}",
-    "工具說明": "Opis narzędzia"
+    "工具說明": "Opis narzędzia",
+    "以下發布中的 agent 有 MCP 工具但沒有設定憑證。如果該伺服器需要授權，請在工具設定中加上憑證參照。": "Te opublikowane agenty mają narzędzia MCP bez skonfigurowanego poświadczenia. Jeśli serwer wymaga autoryzacji, dodaj odwołanie do poświadczenia w ustawieniach narzędzia."
   }
 }
