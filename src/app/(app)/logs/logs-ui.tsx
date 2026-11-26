@@ -66,13 +66,15 @@ export function LoadMore({ hasMore, loading, onMore, count, unit }: { hasMore: b
 
 export function SearchSyntaxHelp() {
   const { t } = useI18n();
+  // The examples are words in the reader's language, so they show what to type, not Chinese.
+  const [tea, milkTea, noIce, hot, pearl, stem] = [t("紅茶"), t("奶茶"), t("去冰"), t("熱"), t("珍珠奶茶"), t("珍")];
   const rows: [string, string][] = [
-    ["紅茶 AND 去冰", t("兩個詞都要出現（詞與詞之間空一格也是 AND）")],
-    ["紅茶 OR 奶茶", t("任一個詞出現即可")],
-    ["紅茶 NOT 熱", t("有前者、沒有後者；也可寫成「紅茶 -熱」")],
-    ["(紅茶 OR 奶茶) AND 去冰", t("用括號決定先算哪一部分")],
-    ["\"珍珠奶茶\"", t("用雙引號找完整片語")],
-    ["珍*", t("找以「珍」開頭的詞")],
+    [`${tea} AND ${noIce}`, t("兩個詞都要出現（詞與詞之間空一格也是 AND）")],
+    [`${tea} OR ${milkTea}`, t("任一個詞出現即可")],
+    [`${tea} NOT ${hot}`, t("有前者、沒有後者；也可寫成「{0}」", [`${tea} -${hot}`])],
+    [`(${tea} OR ${milkTea}) AND ${noIce}`, t("用括號決定先算哪一部分")],
+    [`"${pearl}"`, t("用雙引號找完整片語")],
+    [`${stem}*`, t("找以「{0}」開頭的詞", [stem])],
   ];
   return (
     <details className={styles.syntax}>

@@ -549,7 +549,15 @@
     "專案的憑證已失效，請聯絡管理員": "The project credential is no longer valid. Contact an administrator.",
     "關閉": "Close",
     "調整列表與內容的寬度": "Resize the list and the record",
-    "← 回到回合列表": "← Back to the turn list"
+    "← 回到回合列表": "← Back to the turn list",
+    "紅茶": "tea",
+    "奶茶": "latte",
+    "去冰": "iced",
+    "熱": "hot",
+    "珍珠奶茶": "bubble tea",
+    "珍": "bub",
+    "有前者、沒有後者；也可寫成「{0}」": "The first but not the second; also written as {0}",
+    "找以「{0}」開頭的詞": "Finds words starting with {0}"
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1101,6 +1109,14 @@
     "專案的憑證已失效，請聯絡管理員": "Poświadczenie projektu jest nieważne. Skontaktuj się z administratorem.",
     "關閉": "Zamknij",
     "調整列表與內容的寬度": "Zmień szerokość listy i rekordu",
-    "← 回到回合列表": "← Wróć do listy tur"
+    "← 回到回合列表": "← Wróć do listy tur",
+    "紅茶": "herbata",
+    "奶茶": "latte",
+    "去冰": "mrożona",
+    "熱": "gorąca",
+    "珍珠奶茶": "bubble tea",
+    "珍": "bub",
+    "有前者、沒有後者；也可寫成「{0}」": "Pierwsze, ale nie drugie; można też zapisać jako {0}",
+    "找以「{0}」開頭的詞": "Znajduje słowa zaczynające się od {0}"
   }
 }
