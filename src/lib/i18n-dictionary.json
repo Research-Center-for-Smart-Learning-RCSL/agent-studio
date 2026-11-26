@@ -565,7 +565,17 @@
     "請選擇你管理的組織": "Choose an organization you manage",
     "所屬組織": "Organization",
     "全域（僅管理員）": "Global (admins only)",
-    "這個憑證已屬於其他組織，不能更改所屬組織": "This credential already belongs to another organization; its organization cannot be changed here"
+    "這個憑證已屬於其他組織，不能更改所屬組織": "This credential already belongs to another organization; its organization cannot be changed here",
+    "讓模型在沙盒裡撰寫並執行 Python 程式，用來計算、分析資料、處理檔案與產生圖表。": "Lets the model write and run Python in a sandbox to calculate, analyze data, process files and draw charts.",
+    "讓模型在託管的容器中執行 shell 指令與技能（skills），可讀寫 /mnt/data 下的附加檔案。": "Lets the model run shell commands and skills in a hosted container, with the attached files available under /mnt/data.",
+    "從已附加的向量資料庫搜尋內容，讓模型根據你的文件回答。": "Searches the attached vector stores so the model can answer from your documents.",
+    "讓模型上網搜尋最新資訊，並在回答中附上來源。": "Lets the model search the web for current information and cite sources in its answer.",
+    "讓模型依文字描述產生或編輯圖片。": "Lets the model generate or edit images from a text description.",
+    "透過 MCP 連到外部伺服器，使用該伺服器提供的工具。": "Connects to an external server over MCP and uses the tools that server provides.",
+    "讓模型以程式碼組合並呼叫其他已啟用的工具。": "Lets the model combine and call the other enabled tools from code.",
+    "自訂函式：由你定義名稱與參數，模型可以呼叫；執行環境需要有對應的處理程式才會真的執行。": "Custom function: you define its name and parameters and the model can call it; the runtime needs a matching handler for it to actually run.",
+    "工具類型：{0}": "Tool type: {0}",
+    "工具說明": "Tool description"
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1133,6 +1143,16 @@
     "請選擇你管理的組織": "Wybierz organizację, którą zarządzasz",
     "所屬組織": "Organizacja",
     "全域（僅管理員）": "Globalne (tylko administratorzy)",
-    "這個憑證已屬於其他組織，不能更改所屬組織": "To poświadczenie należy już do innej organizacji; nie można tu zmienić jej przypisania"
+    "這個憑證已屬於其他組織，不能更改所屬組織": "To poświadczenie należy już do innej organizacji; nie można tu zmienić jej przypisania",
+    "讓模型在沙盒裡撰寫並執行 Python 程式，用來計算、分析資料、處理檔案與產生圖表。": "Pozwala modelowi pisać i uruchamiać kod Python w piaskownicy: obliczenia, analiza danych, przetwarzanie plików i wykresy.",
+    "讓模型在託管的容器中執行 shell 指令與技能（skills），可讀寫 /mnt/data 下的附加檔案。": "Pozwala modelowi uruchamiać polecenia powłoki i umiejętności (skills) w kontenerze; dołączone pliki są w /mnt/data.",
+    "從已附加的向量資料庫搜尋內容，讓模型根據你的文件回答。": "Przeszukuje dołączone bazy wektorowe, aby model odpowiadał na podstawie Twoich dokumentów.",
+    "讓模型上網搜尋最新資訊，並在回答中附上來源。": "Pozwala modelowi wyszukiwać aktualne informacje w internecie i podawać źródła w odpowiedzi.",
+    "讓模型依文字描述產生或編輯圖片。": "Pozwala modelowi tworzyć lub edytować obrazy na podstawie opisu.",
+    "透過 MCP 連到外部伺服器，使用該伺服器提供的工具。": "Łączy się z zewnętrznym serwerem przez MCP i korzysta z jego narzędzi.",
+    "讓模型以程式碼組合並呼叫其他已啟用的工具。": "Pozwala modelowi łączyć i wywoływać inne włączone narzędzia z poziomu kodu.",
+    "自訂函式：由你定義名稱與參數，模型可以呼叫；執行環境需要有對應的處理程式才會真的執行。": "Funkcja niestandardowa: definiujesz nazwę i parametry, a model może ją wywołać; środowisko musi mieć odpowiedni handler, aby działała.",
+    "工具類型：{0}": "Typ narzędzia: {0}",
+    "工具說明": "Opis narzędzia"
   }
 }

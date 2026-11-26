@@ -724,6 +724,9 @@ a {
 .available-tool-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--studio-border); border-radius: 9px; background: #fff; }
 .available-tool-row.is-enabled { background: #edf3f6; border-color: #9fb3c2; }
 .enabled-tool-info { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.tool-help-button { display: inline-grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--studio-muted); font-size: 15px; line-height: 1; cursor: pointer; border-radius: 50%; }
+.tool-help-button:hover, .tool-help-button:focus-visible { color: var(--studio-accent); }
+.tool-help { max-width: 320px; line-height: 1.55; overflow-wrap: anywhere; }
 .enabled-tool-info > strong, .enabled-tool-info > .ant-typography { min-width: 0; overflow-wrap: anywhere; }
 .available-tool-description { flex-basis: 100%; font-size: 12px; }
 .available-tools-section { margin-top: 24px; }

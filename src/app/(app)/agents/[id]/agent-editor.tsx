@@ -10,28 +10,8 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Editor from "@monaco-editor/react";
-import { CloudUploadOutlined, CopyOutlined, DiffOutlined, FileTextOutlined, FullscreenOutlined } from "@ant-design/icons";
-import {
-  Alert,
-  App,
-  Button,
-  Card,
-  Col,
-  Collapse,
-  Dropdown,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Popconfirm,
-  Row,
-  Select,
-  Space,
-  Switch,
-  Tabs,
-  Tag,
-  Typography,
-} from "antd";
+import { CloudUploadOutlined, CopyOutlined, DiffOutlined, ExclamationCircleOutlined, FileTextOutlined, FullscreenOutlined } from "@ant-design/icons";
+import { Alert, App, Button, Card, Col, Collapse, Dropdown, Form, Input, InputNumber, Modal, Popconfirm, Popover, Row, Select, Space, Switch, Tabs, Tag, Typography } from "antd";
 import type { AgentSettings, InstructionMessage } from "@/db/schema";
 import { attachmentNames, maxToolFiles, maxToolUploadBytes, maxToolUploadCount, readToolJson, toolAttachments, toolFileId, toolVectorStoreId, withAttachmentNames, type ToolUploadAttachment } from "@/lib/tool-attachments";
 import { maxToolSkills, toolSkillId, toolSkills } from "@/lib/tool-skills";
@@ -851,6 +831,21 @@ function ToolsEditor(props: {
     { key: "integrations", title: t("外部整合"), items: props.templates.filter((template) => template.tool.type === "mcp").map((template) => ({ key: template.key, name: toolLabel(template.tool), tool: template.tool })) },
     { key: "other", title: t("其他工具"), items: props.templates.filter((template) => !["mcp", "function", "code_interpreter", "shell", "file_search"].includes(String(template.tool.type))).map((template) => ({ key: template.key, name: toolLabel(template.tool), tool: template.tool })) },
   ];
+  /** A short plain-language note on what a tool does, for the (!) next to it. */
+  function toolHelp(item: (typeof availableGroups)[number]["items"][number]): string {
+    if (item.description) return item.description;
+    switch (String(item.tool.type)) {
+      case "code_interpreter": return t("讓模型在沙盒裡撰寫並執行 Python 程式，用來計算、分析資料、處理檔案與產生圖表。");
+      case "shell": return t("讓模型在託管的容器中執行 shell 指令與技能（skills），可讀寫 /mnt/data 下的附加檔案。");
+      case "file_search": return t("從已附加的向量資料庫搜尋內容，讓模型根據你的文件回答。");
+      case "web_search": return t("讓模型上網搜尋最新資訊，並在回答中附上來源。");
+      case "image_generation": return t("讓模型依文字描述產生或編輯圖片。");
+      case "mcp": return t("透過 MCP 連到外部伺服器，使用該伺服器提供的工具。");
+      case "programmatic_tool_calling": return t("讓模型以程式碼組合並呼叫其他已啟用的工具。");
+      case "function": return t("自訂函式：由你定義名稱與參數，模型可以呼叫；執行環境需要有對應的處理程式才會真的執行。");
+      default: return t("工具類型：{0}", [String(item.tool.type)]);
+    }
+  }
   function configuredIndex(item: (typeof availableGroups)[number]["items"][number]) {
     if (item.createOnly) return -1;
     if (item.configuredIndex !== undefined) return item.configuredIndex;
@@ -869,7 +864,7 @@ function ToolsEditor(props: {
             const activeIndex = configuredIndex(item);
             const enabled = activeIndex >= 0;
             return <article className={`available-tool-row${enabled ? " is-enabled" : ""}`} key={item.key}>
-              <div className="enabled-tool-info"><strong>{item.name}</strong><Typography.Text type="secondary">{String(item.tool.type)}</Typography.Text>{enabled && <Tag color="blue">{t("已啟用")}</Tag>}{item.unsupported && <Tag color="warning">{t("執行環境不會執行")}</Tag>}{item.description && <Typography.Text type="secondary" className="available-tool-description">{item.description}</Typography.Text>}</div>
+              <div className="enabled-tool-info"><strong>{item.name}</strong><Popover trigger="click" placement="top" title={item.name} content={<div className="tool-help">{toolHelp(item)}</div>}><button type="button" className="tool-help-button" aria-label={`${item.name}：${t("工具說明")}`}><ExclamationCircleOutlined /></button></Popover><Typography.Text type="secondary">{String(item.tool.type)}</Typography.Text>{enabled && <Tag color="blue">{t("已啟用")}</Tag>}{item.unsupported && <Tag color="warning">{t("執行環境不會執行")}</Tag>}{item.description && <Typography.Text type="secondary" className="available-tool-description">{item.description}</Typography.Text>}</div>
               <Space wrap>
                 {enabled && <Button type="link" size="small" onClick={() => open(activeIndex, props.tools[activeIndex])}>{props.readOnly ? t("檢視") : t("設定")}</Button>}
                 {item.createOnly ? <Button disabled={props.readOnly} onClick={() => open("new", item.tool)}>{t("建立並設定")}</Button> : <Switch
