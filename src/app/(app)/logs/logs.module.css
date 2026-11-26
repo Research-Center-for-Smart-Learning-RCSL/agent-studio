@@ -24,6 +24,34 @@
   margin-block-end: 4px;
 }
 
+/* Title, section tabs and mascot share one row so the lists below get the height. */
+.topbar {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 0 18px;
+  padding-inline: clamp(8px, 1vw, 14px);
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: clamp(20px, 2vw, 24px);
+  line-height: 1.2;
+}
+
+.topbar :global(.ant-tabs) {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.topbar :global(.ant-tabs-nav) {
+  margin: 0;
+}
+
+.topbar :global(.ant-tabs-tab) {
+  padding-block: 10px;
+}
+
 .filters {
   display: flex;
   flex-flow: row wrap;
@@ -481,8 +509,7 @@
 /* A list with its open record beside it (SplitLayout); each side scrolls on its own. */
 /* The shell pads the page by 48px below; the negative margin lets the panes use that space so the page itself does not scroll. */
 .splitOn { display: grid; grid-template-columns: 34% auto minmax(0, 1fr); height: calc(100dvh - var(--split-top, 0px)); margin-block-end: -48px; }
-/* The title and mascot give way to the panes, as the old site's page title did. */
-.page:has(.splitOn) > .masthead { display: none; }
+
 .splitOn > * { overflow: auto; min-height: 0; }
 .splitDragging { user-select: none; cursor: col-resize; }
 .splitOn > .splitDetail { position: relative; padding-inline-start: 40px; }

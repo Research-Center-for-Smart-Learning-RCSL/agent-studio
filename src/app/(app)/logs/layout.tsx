@@ -23,11 +23,11 @@ export default async function LogsLayout({ children }: LayoutProps<"/logs">) {
   return (
     <LogsProvider userEmail={user.email}>
       <div className={`${styles.page} studio-logs`}>
-        <div className={styles.masthead}>
+        <div className={styles.topbar}>
           <h1>Logs</h1>
-          <DirectoryRobot variant="logs" />
+          <LogsNav isAdmin={user.isAdmin} />
+          <DirectoryRobot variant="logs" size="compact" />
         </div>
-        <LogsNav isAdmin={user.isAdmin} />
         {children}
       </div>
     </LogsProvider>

@@ -137,7 +137,7 @@ a {
 }
 
 .studio-main:has(.studio-logs) {
-  padding-block-start: clamp(12px, 1.5vw, 20px);
+  padding-block-start: 6px;
 }
 
 .studio-panel {
