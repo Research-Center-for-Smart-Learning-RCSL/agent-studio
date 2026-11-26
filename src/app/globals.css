@@ -164,7 +164,7 @@ a {
 }
 
 .login-robot { display: flex; justify-content: center; }
-.login-robot > div { flex: 0 0 auto; width: 128px; }
+.login-robot > div { flex: 0 0 auto; width: 160px; }
 
 .login-card h1 {
   margin: 12px 0 4px;
