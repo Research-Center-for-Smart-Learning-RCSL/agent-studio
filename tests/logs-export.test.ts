@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeFilter, titleAsName } from "../src/lib/logs-export";
+import { defaultConversationName, describeFilter, titleAsName } from "../src/lib/logs-export";
 
 const t = (key: string, values?: unknown[]) => (values ? key.replace(/\{(\d+)\}/g, (_, i: string) => String(values[Number(i)])) : key);
 
@@ -31,5 +31,17 @@ describe("describeFilter", () => {
 
   it("is empty when nothing is filtered", () => {
     expect(describeFilter({ bookmarked: false }, t)).toBe("");
+  });
+});
+
+describe("defaultConversationName", () => {
+  it("names a conversation like the server names its export", () => {
+    expect(defaultConversationName("點餐助理", "2026-11-20T11:00:05.000+08:00", "zh-TW")).toBe("對話_點餐助理_2026-11-20-1100");
+    expect(defaultConversationName("Order Bot", "2026-11-20T11:00:05+08:00", "en")).toBe("conversation_Order Bot_2026-11-20-1100");
+  });
+
+  it("leaves out what is unknown and makes the agent safe as a file name", () => {
+    expect(defaultConversationName(null, "2026-11-20T03:01:00+08:00", "zh-TW")).toBe("對話_2026-11-20-0301");
+    expect(defaultConversationName("a/b: v1.2", null, "en")).toBe("conversation_a-b- v1-2");
   });
 });

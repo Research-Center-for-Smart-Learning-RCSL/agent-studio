@@ -36,6 +36,18 @@ export function titleAsName(title: string, format: string): string {
   return s;
 }
 
+/**
+ * The name an export of one conversation gets when it is not named by a title (naming.py, suggested_name):
+ * the kind, the agent and the first turn's time, e.g. "對話_點餐助理_2026-11-20-1100".
+ * `startedAt` is the API's Taipei wall-clock time of the conversation's first turn.
+ */
+export function defaultConversationName(agent: string | null | undefined, startedAt: string | null | undefined, language: "zh-TW" | "en"): string {
+  const kind = language === "en" ? "conversation" : "對話";
+  const part = agent ? titleAsName(agent, "xlsx").replace(DOTS, "-").slice(0, 60).trim() : "";
+  const when = startedAt ? `${startedAt.slice(0, 10)}-${startedAt.slice(11, 13)}${startedAt.slice(14, 16)}` : "";
+  return titleAsName([kind, part, when].filter(Boolean).join("_"), "xlsx");
+}
+
 type Translate = (key: string, values?: unknown[]) => string;
 
 const TIMES = new Set(["since", "until"]);

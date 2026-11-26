@@ -48,7 +48,7 @@ export function TurnList({ pane = false, selected = null }: { pane?: boolean; se
       {list.error && <ErrorNote error={list.error} onRetry={list.reload} />}
       {list.loading && !bad && <Spin />}
       {empty && !bad && <Empty description={t("沒有符合的回合")} />}
-      {list.items.length > 0 && <ListExport filter={turnFilters} robotName={robotName} />}
+      {list.items.length > 0 && !pane && <ListExport filter={turnFilters} robotName={robotName} />}
       {list.items.map((turn) => {
         const href = hrefOf(turn);
         if (!pane) return <TurnCard key={turn.id} turn={turn} query={filters.q} showConversation openHref={href} />;

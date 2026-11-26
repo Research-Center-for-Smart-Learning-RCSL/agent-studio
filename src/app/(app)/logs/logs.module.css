@@ -538,3 +538,5 @@
 .panePage :global(.ant-table-tbody) > tr.selectedRow > td, .turnRow.selectedRow { background: #e3ecf1; }
 .panePage :global(.ant-table-tbody) > tr.selectedRow > td:first-child, .turnRow.selectedRow { box-shadow: inset 3px 0 0 var(--studio-accent); }
 .selectedRow { background: #e3ecf1; }
+/* Opened on a turn far down, the record's title stays in view above it. */
+.splitDetail .header { position: sticky; top: 0; z-index: 2; background: #f1f4f6; padding-block: 6px; margin-block-end: 4px; border-bottom: 1px solid var(--studio-border); }

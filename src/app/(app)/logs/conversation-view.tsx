@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { listSearchOf } from "./split-layout";
+import { defaultConversationName } from "@/lib/logs-export";
 import { StarFilled, StarOutlined } from "@ant-design/icons";
 import { Button, Empty, InputNumber, Spin } from "antd";
 import { useI18n } from "@/lib/i18n-client";
@@ -23,7 +24,7 @@ type Loaded = { key: string; items: Turn[]; next: string | null; prev: string | 
 const asError = (error: unknown) => (error instanceof LogsError ? error : new LogsError(0, String(error)));
 
 export function ConversationView({ id, listPath = "/logs" }: { id: string; listPath?: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { scope, ready } = useLogsScope();
   const search = useSearchParams();
   const focus = search.get("turn");
@@ -88,12 +89,24 @@ export function ConversationView({ id, listPath = "/logs" }: { id: string; listP
 
   const total = items[0]?.conversation_turns ?? items.length;
   const head = items[0];
+  // The name is made from the conversation's first turn, which may lie outside the window being shown.
+  const windowStartsAtFirst = current !== null && !current.error && current.prev === null;
+  const [first, setFirst] = useState<{ id: string; at: string | null } | null>(null);
+  useEffect(() => {
+    if (!ready || current === null || current.error || current.prev === null) return;
+    const controller = new AbortController();
+    logsGet<ConversationTurnPage>(`/v1/conversations/${encodeURIComponent(id)}/turns`, { seq: 1, limit: 1 }, scope, controller.signal)
+      .then((page) => setFirst({ id, at: page.items[0]?.started_at ?? null }), () => undefined);
+    return () => controller.abort();
+  }, [id, ready, scope, current]);
+  const startedAt = windowStartsAtFirst ? head?.started_at : first?.id === id ? first.at : undefined;
+  const defaultTitle = startedAt === undefined ? id : defaultConversationName(head?.agent, startedAt, locale === "zh-Hant" ? "zh-TW" : "en");
   const missing = focus != null && startKey === "{}" && current !== null && !current.error && !items.some((turn) => turn.id === focus);
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <Link className={styles.backLink} href={`${listPath}${listSearchOf(search)}`}>{listPath === "/logs" ? t("← 回到對話列表") : t("← 回到回合列表")}</Link>
-        <ConversationTitle id={id} fallback={head?.conversation_title || id} />
+        <ConversationTitle id={id} fallback={head?.conversation_title || defaultTitle} />
         <Bookmark id={id} />
       </div>
       {head && (
