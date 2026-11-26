@@ -1,4 +1,5 @@
 "use client";
+import { formatTaipei } from "@/lib/format-time";
 import { runtimeFunctionNames, runtimeFunctions } from "@/lib/runtime-functions";
 import { useI18n } from "@/lib/i18n-client";
 import { DirectoryRobot } from "../../directory-robot";
@@ -1044,7 +1045,7 @@ function VersionList(props: {
                 </Space>
               </div>
               <div className="version-history-meta">
-                <span>{new Date(v.createdAt).toLocaleString(locale === "zh-Hant" ? "zh-TW" : locale, { hour12: false, timeZone: "Asia/Taipei" })}</span>
+                <span>{formatTaipei(v.createdAt, locale)}</span>
                 <span>{v.createdBy ?? "OpenAI"}</span>
                 <span>{v.model}</span>
               </div>

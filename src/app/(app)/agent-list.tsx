@@ -1,4 +1,5 @@
 "use client";
+import { formatTaipei } from "@/lib/format-time";
 import { useI18n } from "@/lib/i18n-client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
@@ -203,7 +204,7 @@ function AgentResults({ rows, hasFilters, restoredView, context }: {
 }) {
   const { t, locale } = useI18n();
   const router = useRouter();
-  const dateFormat = new Intl.DateTimeFormat(locale === "zh-Hant" ? "zh-TW" : locale, { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Taipei", hour12: false });
+  const dateFormat = { format: (date: Date) => formatTaipei(date, locale, false) };
   const [visibleCount, setVisibleCount] = useState(() => {
     const anchorIndex = restoredView?.anchor ? rows.findIndex((row) => row.id === restoredView.anchor?.id) : -1;
     return Math.max(agentsPerBatch, restoredView?.visibleCount ?? 0, anchorIndex + 1);

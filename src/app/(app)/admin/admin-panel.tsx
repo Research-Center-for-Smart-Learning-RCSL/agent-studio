@@ -1,5 +1,6 @@
 "use client";
 import { useI18n } from "@/lib/i18n-client";
+import { formatTaipei } from "@/lib/format-time";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -35,7 +36,7 @@ type Props = {
   unapprovedReferences: { id: string; name: string; projectId: string; serverUrl: string | null; field: string; secret: string }[];
 };
 
-const time = (value: string | null, locale: string) => (value ? new Date(value).toLocaleString(locale === "zh-Hant" ? "zh-TW" : locale, { hour12: false, timeZone: "Asia/Taipei" }) : "-");
+const time = (value: string | null, locale: string) => (value ? formatTaipei(value, locale) : "-");
 
 export function AdminPanel(props: Props) {
   const { t } = useI18n();
