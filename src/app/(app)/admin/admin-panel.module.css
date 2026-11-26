@@ -98,7 +98,7 @@
 }
 
 /* The grant form floats at the bottom of the screen and rests after the table once the end is reached. */
-.dockCard {
+.page :global(.ant-card).dockCard {
   position: sticky;
   bottom: 8px;
   z-index: 5;
