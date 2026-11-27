@@ -41,7 +41,7 @@ describe("parseModelPresets", () => {
   });
 
   it("rejects blank ids, ids with spaces, and duplicates ignoring case", () => {
-    expect(() => parseModelPresets([{ model: "  ", costly: false }])).toThrow();
+    expect(() => parseModelPresets([{ model: "  ", costly: false }])).toThrow(new Error("模型 ID 不可空白"));
     expect(() => parseModelPresets([{ model: "a b", costly: false }])).toThrow();
     expect(() => parseModelPresets([{ model: "gpt-x", costly: false }, { model: "GPT-X", costly: true }])).toThrow("預設模型不可重複");
   });

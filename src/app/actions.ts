@@ -339,6 +339,8 @@ export async function saveModelPresetsAction(input: unknown) {
     const admin = await requireAdmin();
     const list = parseModelPresets(input);
     await db.transaction(async (tx) => {
+      // Without this, two saves racing under READ COMMITTED each delete only the rows they can see and insert on top of each other.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('model_presets'))`);
       await tx.delete(modelPresets);
       if (list.length) {
         await tx.insert(modelPresets).values(list.map((p, position) => ({ ...p, position, updatedBy: admin.email })));

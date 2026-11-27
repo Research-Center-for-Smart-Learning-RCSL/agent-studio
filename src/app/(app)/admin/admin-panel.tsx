@@ -56,7 +56,7 @@ export function AdminPanel(props: Props) {
         items={[
           { key: "members", label: t("成員與權限"), children: <Members {...props} /> },
           { key: "secrets", label: t("憑證"), children: <Secrets {...props} /> },
-          ...(props.isAdmin ? [{ key: "models", label: t("模型"), children: <ModelPresets {...props} /> }] : []),
+          ...(props.isAdmin ? [{ key: "models", label: t("模型"), children: <ModelPresets key={JSON.stringify(props.modelPresets)} {...props} /> }] : []),
           ...(props.isAdmin ? [{ key: "sync", label: t("RCSL 同步"), children: <Sync {...props} /> }] : []),
           { key: "audit", label: t("操作紀錄"), children: <Audit {...props} /> },
         ]}
@@ -369,7 +369,7 @@ function ModelPresets(props: Props) {
   return (
     <div style={{ maxWidth: 640 }}>
       <p>{t("編輯器的模型下拉選單只會列出這裡的模型，使用者仍可手動輸入其他模型。標示為較貴的模型被選取時，編輯器會顯示費用提醒。")}</p>
-      <Space direction="vertical" style={{ width: "100%" }}>
+      <Space orientation="vertical" style={{ width: "100%" }}>
         {rows.map((row, index) => (
           <Space key={index} wrap>
             <Input
