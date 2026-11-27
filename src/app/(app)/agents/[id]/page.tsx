@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { organizations, projects } from "@/db/schema";
+import { modelPresets, organizations, projects } from "@/db/schema";
 import { getAgent, getVersion, listVersions } from "@/lib/agents";
 import { can, requireUser } from "@/lib/authz";
 import { logsConfigured } from "@/lib/logs";
@@ -32,6 +32,8 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
         and (a.project_id = ${found.agent.projectId}
           or t->>'type' not in ('code_interpreter', 'shell', 'file_search'))
     ) x order by key, updated_at desc`);
+
+  const presetRows = await db.select({ model: modelPresets.model, costly: modelPresets.costly }).from(modelPresets).orderBy(asc(modelPresets.position));
 
   const canEdit = can(user, found.agent.projectId, "editor");
   const editableProjectIds = [...user.projectRoles.keys()].filter((projectId) => can(user, projectId, "editor"));
@@ -74,6 +76,7 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
       copyProjects={copyProjects}
       canUploadToolFiles={canEdit && !found.agent.archivedAt && found.projectActive && (await toolFileAvailable(found.agent.projectId))}
       toolTemplates={templates.rows.map((r) => ({ key: r.key, tool: r.tool })) satisfies ToolTemplate[]}
+      modelPresets={presetRows}
     />
   );
 }

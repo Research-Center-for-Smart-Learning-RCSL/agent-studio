@@ -22,6 +22,13 @@
       "when": 1795657917653,
       "tag": "0002_org_manager",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795790864694,
+      "tag": "0003_model_presets",
+      "breakpoints": true
     }
   ]
 }
