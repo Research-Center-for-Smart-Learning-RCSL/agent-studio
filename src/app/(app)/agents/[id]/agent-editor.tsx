@@ -2,6 +2,7 @@
 import { formatTaipei } from "@/lib/format-time";
 import { runtimeFunctionNames, runtimeFunctions } from "@/lib/runtime-functions";
 import { useI18n } from "@/lib/i18n-client";
+import { isCostlyModel, presetModels, startsInManualMode } from "@/lib/models";
 import { DirectoryRobot } from "../../directory-robot";
 import { readDirectoryView } from "../../directory-view";
 
@@ -61,7 +62,6 @@ export function AgentEditor(props: {
   canEdit: boolean;
   copyProjects: { id: string; name: string; organizationName: string }[];
   toolTemplates: ToolTemplate[];
-  modelSuggestions: string[];
   canUploadToolFiles: boolean;
 }) {
   return (
@@ -240,7 +240,6 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
                     model={draft.model}
                     settings={draft.settings}
                     readOnly={readOnly}
-                    suggestions={props.modelSuggestions}
                     onChange={(model, settings) => setDraft({ ...draft, model, settings })}
                   />
                 ),
@@ -533,13 +532,13 @@ function InstructionsToolbar(props: {
 }
 
 const EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh"];
+const MANUAL_MODEL = "__manual__";
 const VERBOSITY = ["low", "medium", "high"];
 
 function ModelSettings(props: {
   model: string;
   settings: AgentSettings;
   readOnly: boolean;
-  suggestions: string[];
   onChange: (model: string, settings: AgentSettings) => void;
 }) {
   const { t } = useI18n();
@@ -550,8 +549,8 @@ function ModelSettings(props: {
   const [rawOpen, setRawOpen] = useState(false);
   const [raw, setRaw] = useState("");
   const [rawError, setRawError] = useState<string | null>(null);
-  const [modelSearch, setModelSearch] = useState("");
-  const models = [...new Set([...props.suggestions, props.model, modelSearch.trim()].filter(Boolean))];
+  const [manual, setManual] = useState(() => startsInManualMode(props.model));
+  const selectValue = manual ? MANUAL_MODEL : props.model || undefined;
 
   return (
     <Form layout="vertical" disabled={props.readOnly} style={{ maxWidth: 560 }}>
@@ -559,20 +558,38 @@ function ModelSettings(props: {
         <Select
           id="agent-model"
           aria-label={t("模型")}
-          placeholder={t("選擇模型或輸入模型 ID")}
-          value={props.model || undefined}
-          options={models.map((model) => ({
-            value: model,
-            label: model === modelSearch.trim() && model !== props.model && !props.suggestions.includes(model)
-              ? t("使用 {0}", [model])
-              : model,
-          }))}
-          onChange={(model) => props.onChange(model, s)}
-          showSearch={{ searchValue: modelSearch, onSearch: setModelSearch, optionFilterProp: "value" }}
-          onOpenChange={(open) => {
-            if (!open) setModelSearch("");
+          placeholder={t("選擇模型")}
+          value={selectValue}
+          options={[
+            ...presetModels.map((m) => ({ value: m.id, label: m.id })),
+            { value: MANUAL_MODEL, label: t("其他模型（手動輸入）") },
+          ]}
+          onChange={(value) => {
+            if (value === MANUAL_MODEL) {
+              setManual(true);
+              return;
+            }
+            setManual(false);
+            props.onChange(value, s);
           }}
         />
+        {manual && (
+          <Input
+            aria-label={t("模型 ID")}
+            placeholder={t("輸入模型 ID")}
+            value={props.model}
+            onChange={(event) => props.onChange(event.target.value, s)}
+            style={{ marginTop: 8 }}
+          />
+        )}
+        {isCostlyModel(props.model) && (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginTop: 8 }}
+            title={t("這個模型的費用可能較高，請確認用量後再使用。")}
+          />
+        )}
       </Form.Item>
       <Row gutter={16}>
         <Col span={12}>
