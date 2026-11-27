@@ -330,10 +330,10 @@ function AgentResults({ rows, hasFilters, restoredView, context, logsEnabled }: 
                 <Link
                   className="agent-open"
                   href={`/agents/${row.id}`}
-                  aria-label={t("查看 {0}", [row.name])}
+                  aria-label={t("設定 {0}", [row.name])}
                   onNavigate={() => rememberDirectoryView(context, row.id, Math.min(visibleCount, rows.length), results.current)}
                 >
-                  {t("查看")}<span aria-hidden="true"> ›</span>
+                  {t("設定")}<span aria-hidden="true"> ›</span>
                 </Link>
                 {logsEnabled && (
                   <Link className="agent-open agent-open-logs" href={`/logs?prompt=${encodeURIComponent(row.id)}`} aria-label={t("查看 {0} 的 Logs", [row.name])}>

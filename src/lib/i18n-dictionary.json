@@ -579,7 +579,8 @@
     "以下發布中的 agent 有 MCP 工具但沒有設定憑證。如果該伺服器需要授權，請在工具設定中加上憑證參照。": "These published agents have MCP tools but no credential configured. If the server needs authorization, add a credential reference in the tool settings.",
     "依 Agent 篩選": "Filter by agent",
     "查看 {0} 的 Logs": "View logs of {0}",
-    "查看此 Agent 的 Logs": "View this agent's logs"
+    "查看此 Agent 的 Logs": "View this agent's logs",
+    "設定 {0}": "Configure {0}"
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1161,6 +1162,7 @@
     "以下發布中的 agent 有 MCP 工具但沒有設定憑證。如果該伺服器需要授權，請在工具設定中加上憑證參照。": "Te opublikowane agenty mają narzędzia MCP bez skonfigurowanego poświadczenia. Jeśli serwer wymaga autoryzacji, dodaj odwołanie do poświadczenia w ustawieniach narzędzia.",
     "依 Agent 篩選": "Filtruj według agenta",
     "查看 {0} 的 Logs": "Zobacz logi agenta {0}",
-    "查看此 Agent 的 Logs": "Zobacz logi tego agenta"
+    "查看此 Agent 的 Logs": "Zobacz logi tego agenta",
+    "設定 {0}": "Konfiguruj {0}"
   }
 }
