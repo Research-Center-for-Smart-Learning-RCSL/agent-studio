@@ -2,7 +2,7 @@
 import { formatTaipei } from "@/lib/format-time";
 import { runtimeFunctionNames, runtimeFunctions } from "@/lib/runtime-functions";
 import { useI18n } from "@/lib/i18n-client";
-import { isCostlyModel, presetModels, startsInManualMode } from "@/lib/models";
+import { isCostlyModel, startsInManualMode, type ModelPreset } from "@/lib/models";
 import { DirectoryRobot } from "../../directory-robot";
 import { readDirectoryView } from "../../directory-view";
 
@@ -62,6 +62,7 @@ export function AgentEditor(props: {
   canEdit: boolean;
   copyProjects: { id: string; name: string; organizationName: string }[];
   toolTemplates: ToolTemplate[];
+  modelPresets: ModelPreset[];
   canUploadToolFiles: boolean;
 }) {
   return (
@@ -119,6 +120,8 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
   const saveBarRef = useRef<HTMLDivElement>(null);
   const portalReady = useSyncExternalStore(() => () => {}, () => true, () => false);
   const readOnly = !props.canEdit;
+  // Discarding edits remounts the model field, whose manual-entry flag is local state.
+  const [resetCount, setResetCount] = useState(0);
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(base), [draft, base]);
 
   useEffect(() => {
@@ -177,9 +180,9 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
       <div className="editor-save-status"><Typography.Text strong type="warning" role="status">● {t("有未儲存的修改")}</Typography.Text></div>
       <div className="editor-save-controls">
         <Input aria-label={t("版本備註（選填）")} placeholder={t("版本備註（選填）")} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
-        <Button size="small" loading={busy} onClick={() => save(false)}>{t("儲存為新版本")}</Button>
-        <Button size="small" type="primary" loading={busy} onClick={() => save(true)}>{t("儲存並發布")}</Button>
-        <Button size="small" type="link" onClick={() => setDraft(structuredClone(base))}>{t("還原")}</Button>
+        <Button size="small" loading={busy} disabled={!draft.model.trim()} onClick={() => save(false)}>{t("儲存為新版本")}</Button>
+        <Button size="small" type="primary" loading={busy} disabled={!draft.model.trim()} onClick={() => save(true)}>{t("儲存並發布")}</Button>
+        <Button size="small" type="link" onClick={() => { setDraft(structuredClone(base)); setResetCount((n) => n + 1); }}>{t("還原")}</Button>
       </div>
     </Card>,
     document.body,
@@ -237,6 +240,8 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
                 label: t("模型與參數"),
                 children: (
                   <ModelSettings
+                    key={resetCount}
+                    presets={props.modelPresets}
                     model={draft.model}
                     settings={draft.settings}
                     readOnly={readOnly}
@@ -539,6 +544,7 @@ function ModelSettings(props: {
   model: string;
   settings: AgentSettings;
   readOnly: boolean;
+  presets: ModelPreset[];
   onChange: (model: string, settings: AgentSettings) => void;
 }) {
   const { t } = useI18n();
@@ -549,7 +555,7 @@ function ModelSettings(props: {
   const [rawOpen, setRawOpen] = useState(false);
   const [raw, setRaw] = useState("");
   const [rawError, setRawError] = useState<string | null>(null);
-  const [manual, setManual] = useState(() => startsInManualMode(props.model));
+  const [manual, setManual] = useState(() => startsInManualMode(props.model, props.presets));
   const selectValue = manual ? MANUAL_MODEL : props.model || undefined;
 
   return (
@@ -561,11 +567,13 @@ function ModelSettings(props: {
           placeholder={t("選擇模型")}
           value={selectValue}
           options={[
-            ...presetModels.map((m) => ({ value: m.id, label: m.id })),
+            ...props.presets.map((p) => ({ value: p.model, label: p.model })),
             { value: MANUAL_MODEL, label: t("其他模型（手動輸入）") },
           ]}
           onChange={(value) => {
             if (value === MANUAL_MODEL) {
+              // Start from an empty field: keeping a preset's ID would leave its cost warning showing.
+              if (!manual) props.onChange("", s);
               setManual(true);
               return;
             }
@@ -582,7 +590,7 @@ function ModelSettings(props: {
             style={{ marginTop: 8 }}
           />
         )}
-        {isCostlyModel(props.model) && (
+        {isCostlyModel(props.model, props.presets) && (
           <Alert
             type="warning"
             showIcon

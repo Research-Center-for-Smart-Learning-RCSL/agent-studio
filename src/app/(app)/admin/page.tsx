@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { asc, desc, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { auditEvents, memberships, organizations, projects, secrets, users } from "@/db/schema";
+import { auditEvents, memberships, modelPresets, organizations, projects, secrets, users } from "@/db/schema";
 import { canOpenAdmin, requireUser } from "@/lib/authz";
 import { credentialGranted, mcpCredentialReferences } from "@/lib/mcp-credentials";
 import { AdminPanel } from "./admin-panel";
@@ -69,6 +69,10 @@ export default async function AdminPage() {
     .filter((reference) => !credentialGranted(grantsByName.get(reference.name), projectId, reference))
     .map(({ serverUrl, field, name: secret }) => ({ id, name, projectId, serverUrl, field, secret })));
 
+  const presetRows = user.isAdmin
+    ? await db.select({ model: modelPresets.model, costly: modelPresets.costly }).from(modelPresets).orderBy(asc(modelPresets.position))
+    : [];
+
   return (
     <AdminPanel
       me={user.email}
@@ -87,6 +91,7 @@ export default async function AdminPage() {
       audit={auditRows.map((a) => ({ ...a, createdAt: new Date(a.createdAt).toISOString() }))}
       mcpWithoutSecret={mcpWithoutSecret}
       unapprovedReferences={unapprovedReferences}
+      modelPresets={presetRows}
     />
   );
 }

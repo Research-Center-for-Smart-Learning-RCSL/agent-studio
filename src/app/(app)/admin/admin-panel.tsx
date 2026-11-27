@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, App, Button, Card, Form, Input, Popconfirm, Radio, Select, Space, Switch, Table, Tabs, Tag, Typography } from "antd";
 import type { SecretGrant } from "@/db/schema";
+import { maxModelPresets, type ModelPreset } from "@/lib/models";
 import styles from "./admin-panel.module.css";
 import { DirectoryRobot } from "../directory-robot";
 import {
@@ -14,6 +15,7 @@ import {
   deleteSecretAction,
   deleteUserAction,
   removeMembershipAction,
+  saveModelPresetsAction,
   setAdminAction,
   setSecretAction,
   setSecretGrantAction,
@@ -34,6 +36,7 @@ type Props = {
   audit: { id: number; actor: string | null; action: string; targetType: string; targetId: string; detail: unknown; createdAt: string }[];
   mcpWithoutSecret: { id: string; name: string; servers: string[] }[];
   unapprovedReferences: { id: string; name: string; projectId: string; serverUrl: string | null; field: string; secret: string }[];
+  modelPresets: ModelPreset[];
 };
 
 const time = (value: string | null, locale: string) => (value ? formatTaipei(value, locale) : "-");
@@ -53,6 +56,7 @@ export function AdminPanel(props: Props) {
         items={[
           { key: "members", label: t("成員與權限"), children: <Members {...props} /> },
           { key: "secrets", label: t("憑證"), children: <Secrets {...props} /> },
+          ...(props.isAdmin ? [{ key: "models", label: t("模型"), children: <ModelPresets {...props} /> }] : []),
           ...(props.isAdmin ? [{ key: "sync", label: t("RCSL 同步"), children: <Sync {...props} /> }] : []),
           { key: "audit", label: t("操作紀錄"), children: <Audit {...props} /> },
         ]}
@@ -346,6 +350,64 @@ function Secrets(props: Props) {
           },
         ]}
       />
+    </div>
+  );
+}
+
+function ModelPresets(props: Props) {
+  const { t } = useI18n();
+  const act = useAction();
+  const [rows, setRows] = useState<ModelPreset[]>(props.modelPresets);
+  const [busy, setBusy] = useState(false);
+  const changed = JSON.stringify(rows) !== JSON.stringify(props.modelPresets);
+  const update = (index: number, patch: Partial<ModelPreset>) => setRows(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  const move = (index: number, by: number) => {
+    const next = [...rows];
+    [next[index], next[index + by]] = [next[index + by], next[index]];
+    setRows(next);
+  };
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <p>{t("編輯器的模型下拉選單只會列出這裡的模型，使用者仍可手動輸入其他模型。標示為較貴的模型被選取時，編輯器會顯示費用提醒。")}</p>
+      <Space direction="vertical" style={{ width: "100%" }}>
+        {rows.map((row, index) => (
+          <Space key={index} wrap>
+            <Input
+              aria-label={t("模型 ID")}
+              style={{ width: 260 }}
+              value={row.model}
+              onChange={(event) => update(index, { model: event.target.value })}
+            />
+            <Switch
+              aria-label={t("費用較高提醒")}
+              checked={row.costly}
+              checkedChildren={t("費用較高提醒")}
+              unCheckedChildren={t("不提醒")}
+              onChange={(costly) => update(index, { costly })}
+            />
+            <Button size="small" disabled={index === 0} onClick={() => move(index, -1)} aria-label={t("上移")}>↑</Button>
+            <Button size="small" disabled={index === rows.length - 1} onClick={() => move(index, 1)} aria-label={t("下移")}>↓</Button>
+            <Button size="small" danger onClick={() => setRows(rows.filter((_, i) => i !== index))}>{t("刪除")}</Button>
+          </Space>
+        ))}
+        {rows.length === 0 && <Typography.Text type="secondary">{t("目前沒有預設模型，使用者只能手動輸入。")}</Typography.Text>}
+        <Space>
+          <Button disabled={rows.length >= maxModelPresets} onClick={() => setRows([...rows, { model: "", costly: false }])}>{t("新增模型")}</Button>
+          <Button
+            type="primary"
+            disabled={!changed}
+            loading={busy}
+            onClick={async () => {
+              setBusy(true);
+              await act(saveModelPresetsAction(rows), t("已儲存"));
+              setBusy(false);
+            }}
+          >
+            {t("儲存")}
+          </Button>
+          <Button disabled={!changed} onClick={() => setRows(props.modelPresets)}>{t("還原")}</Button>
+        </Space>
+      </Space>
     </div>
   );
 }

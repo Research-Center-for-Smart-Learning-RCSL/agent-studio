@@ -147,3 +147,13 @@ export const auditEvents = pgTable(
   },
   (t) => [index("audit_target_idx").on(t.targetType, t.targetId)],
 );
+
+/** Models offered in the editor's dropdown, in display order; administrators edit them in the admin page. */
+export const modelPresets = pgTable("model_presets", {
+  model: text("model").primaryKey(),
+  /** Selecting this model warns that it may cost more. */
+  costly: boolean("costly").notNull().default(false),
+  position: integer("position").notNull(),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

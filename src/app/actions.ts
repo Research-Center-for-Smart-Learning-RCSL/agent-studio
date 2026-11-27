@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { auditEvents, memberships, projects, secrets, users, type SecretGrant } from "@/db/schema";
+import { auditEvents, memberships, modelPresets, projects, secrets, users, type SecretGrant } from "@/db/schema";
 import { agentSettingsSchema } from "@/lib/agent-settings";
 import {
   createAgent,
@@ -18,6 +18,7 @@ import {
 import { can, ForbiddenError, requireAdmin, requireManager, requireProjectRole, requireUser, type CurrentUser } from "@/lib/authz";
 import { canGrantSecret, canManageOrganization, canManageSecret, membershipOrganization, newSecretOwner, roleFitsScope } from "@/lib/org-admin";
 import { mcpServerUrl, validMcpCredentialField } from "@/lib/mcp-credentials";
+import { parseModelPresets } from "@/lib/models";
 import { sanitizeTools, toRuntimeMessages } from "@/lib/openai-shape";
 import { syncFromRcsl } from "@/lib/rcsl";
 import { encryptSecret, validateToolSecrets } from "@/lib/secrets";
@@ -327,6 +328,22 @@ export async function setSecretGrantAction(name: string, input: SecretGrant, ena
         targetId: name,
         detail: { ...grant, organizationId: secret.organizationId },
       });
+    });
+    revalidatePath("/admin");
+  });
+}
+
+/** Replaces the editor's model dropdown with the submitted list, in the submitted order. */
+export async function saveModelPresetsAction(input: unknown) {
+  return run(async () => {
+    const admin = await requireAdmin();
+    const list = parseModelPresets(input);
+    await db.transaction(async (tx) => {
+      await tx.delete(modelPresets);
+      if (list.length) {
+        await tx.insert(modelPresets).values(list.map((p, position) => ({ ...p, position, updatedBy: admin.email })));
+      }
+      await tx.insert(auditEvents).values({ actor: admin.email, action: "model_presets.set", targetType: "model_presets", targetId: "-", detail: { presets: list } });
     });
     revalidatePath("/admin");
   });
