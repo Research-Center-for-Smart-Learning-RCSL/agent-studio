@@ -268,6 +268,10 @@
 
 .bubble:empty { clip-path: inset(50%); }
 
+/* Let the callout clear the sticky header without raising the robot button. */
+.mascot:is([data-robot-variant="logs"], [data-robot-variant="admin"]) { z-index: auto; }
+.mascot:is([data-robot-variant="logs"], [data-robot-variant="admin"]) .bubble { z-index: 1052; }
+
 @media (prefers-reduced-motion: no-preference) {
   .head {
     transform: perspective(6em) rotateY(var(--head-angle, 0deg));
