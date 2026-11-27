@@ -60,7 +60,7 @@ The app listens on 192.168.100.18:8040. Nginx Proxy Manager forwards `studio.rcs
 
 | Method and path | Result |
 |---|---|
-| `GET /api/runtime/v1/projects/{project_id}/agents` | `{data: [{id, name, default_version}]}` for non-archived agents |
+| `GET /api/runtime/v1/projects/{project_id}/agents` | `{data: [{id, name, default_version, published}]}` for non-archived agents; `published` is false for an agent that has only drafts |
 | `GET /api/runtime/v1/agents/{id}[?version=N]` | `{id, name, version, published_version, archived, request}`, where `request` holds the inline Responses API fields |
 
 Both require `Authorization: Bearer $RUNTIME_TOKEN`.
