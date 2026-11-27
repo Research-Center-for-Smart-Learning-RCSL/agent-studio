@@ -542,8 +542,11 @@ a {
   color: #785114;
 }
 
-/* The sidebar takes about 306px, so the table is far narrower than the viewport. */
-@media (width < 1280px) {
+/*
+ * The sidebar takes about 306px, so the table is far narrower than the viewport. With the updated column
+ * shown, the Agent column needs about 405px to hold a full 53-character ID, which is a viewport of about 1440px.
+ */
+@media (width < 1440px) {
   .directory-panel .agent-updated-column {
     display: none;
   }
