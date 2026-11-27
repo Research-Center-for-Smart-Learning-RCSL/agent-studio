@@ -9,5 +9,5 @@ CREATE TABLE "model_presets" (
 INSERT INTO "model_presets" ("model", "costly", "position") VALUES
 	('gpt-6-luna', false, 0),
 	('gpt-6.1-terra', false, 1),
-	('gpt-6.3-sol', true, 2),
+	('gpt-6.2-sol', true, 2),
 	('gpt-6.2-astra', true, 3);
