@@ -38,3 +38,8 @@ export function isCostlyModel(model: string, presets: readonly ModelPreset[]): b
 export function startsInManualMode(model: string, presets: readonly ModelPreset[]): boolean {
   return model.trim() !== "" && !isPresetModel(model, presets);
 }
+
+/** A new agent starts on the first preset; with no presets it falls back to the caller's choice. */
+export function initialModel(presets: readonly ModelPreset[], fallback: string): string {
+  return presets[0]?.model ?? fallback;
+}

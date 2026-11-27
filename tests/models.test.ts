@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCostlyModel, isPresetModel, maxModelPresets, parseModelPresets, startsInManualMode, type ModelPreset } from "../src/lib/models";
+import { initialModel, isCostlyModel, isPresetModel, maxModelPresets, parseModelPresets, startsInManualMode, type ModelPreset } from "../src/lib/models";
 
 const presets: ModelPreset[] = [
   { model: "gpt-6-luna", costly: false },
@@ -51,5 +51,16 @@ describe("parseModelPresets", () => {
     expect(() => parseModelPresets("a")).toThrow();
     const many = Array.from({ length: maxModelPresets + 1 }, (_, i) => ({ model: `m${i}`, costly: false }));
     expect(() => parseModelPresets(many)).toThrow();
+  });
+});
+
+describe("initialModel", () => {
+  it("starts a new agent on the first preset, whatever its cost flag", () => {
+    expect(initialModel(presets, "gpt-5.2")).toBe("gpt-6-luna");
+    expect(initialModel([{ model: "gpt-6.3-sol", costly: true }], "gpt-5.2")).toBe("gpt-6.3-sol");
+  });
+
+  it("falls back when no preset is configured", () => {
+    expect(initialModel([], "gpt-5.2")).toBe("gpt-5.2");
   });
 });

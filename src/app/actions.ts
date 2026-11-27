@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { auditEvents, memberships, modelPresets, projects, secrets, users, type SecretGrant } from "@/db/schema";
@@ -18,7 +18,7 @@ import {
 import { can, ForbiddenError, requireAdmin, requireManager, requireProjectRole, requireUser, type CurrentUser } from "@/lib/authz";
 import { canGrantSecret, canManageOrganization, canManageSecret, membershipOrganization, newSecretOwner, roleFitsScope } from "@/lib/org-admin";
 import { mcpServerUrl, validMcpCredentialField } from "@/lib/mcp-credentials";
-import { parseModelPresets } from "@/lib/models";
+import { initialModel, parseModelPresets } from "@/lib/models";
 import { sanitizeTools, toRuntimeMessages } from "@/lib/openai-shape";
 import { syncFromRcsl } from "@/lib/rcsl";
 import { encryptSecret, validateToolSecrets } from "@/lib/secrets";
@@ -58,7 +58,12 @@ async function validateVersion(projectId: string, input: unknown) {
   return parsed;
 }
 
-/** New agents start on whatever model most published agents already use. */
+/** New agents start on the first preset model, or on the most used one when no presets are configured. */
+async function defaultModel(): Promise<string> {
+  const presets = await db.select({ model: modelPresets.model, costly: modelPresets.costly }).from(modelPresets).orderBy(asc(modelPresets.position)).limit(1);
+  return initialModel(presets, await mostUsedModel());
+}
+
 async function mostUsedModel(): Promise<string> {
   const rows = await db.execute<{ model: string }>(sql`
     select v.model from agents a
@@ -118,7 +123,7 @@ export async function createAgentAction(projectId: string, name: string) {
   return run(async () => {
     const user = await requireProjectRole(projectId, "editor");
     const initial = await validateVersion(projectId, {
-      model: await mostUsedModel(),
+      model: await defaultModel(),
       instructions: [{ role: "developer", content: "" }],
       tools: [],
       settings: {},
