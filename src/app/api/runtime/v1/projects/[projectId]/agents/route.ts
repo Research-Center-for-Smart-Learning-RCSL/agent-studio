@@ -17,6 +17,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/runtime/v1/p
       id: r.id,
       name: r.name,
       default_version: String(r.publishedVersion ?? r.latestVersion),
+      // False for an agent that only has drafts; callers that must run
+      // published versions only (the physical devices) skip those rows.
+      published: r.publishedVersion !== null,
     }));
   return NextResponse.json({ data }, { headers: { "Cache-Control": "no-store" } });
 }
