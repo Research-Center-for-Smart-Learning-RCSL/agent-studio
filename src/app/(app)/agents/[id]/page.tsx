@@ -33,9 +33,6 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
           or t->>'type' not in ('code_interpreter', 'shell', 'file_search'))
     ) x order by key, updated_at desc`);
 
-  const models = await db.execute<{ model: string }>(sql`
-    select model from agent_versions group by model order by count(*) desc limit 30`);
-
   const canEdit = can(user, found.agent.projectId, "editor");
   const editableProjectIds = [...user.projectRoles.keys()].filter((projectId) => can(user, projectId, "editor"));
   const copyProjects = selected && (user.isAdmin || editableProjectIds.length > 0)
@@ -77,7 +74,6 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
       copyProjects={copyProjects}
       canUploadToolFiles={canEdit && !found.agent.archivedAt && found.projectActive && (await toolFileAvailable(found.agent.projectId))}
       toolTemplates={templates.rows.map((r) => ({ key: r.key, tool: r.tool })) satisfies ToolTemplate[]}
-      modelSuggestions={models.rows.map((r) => r.model)}
     />
   );
 }
