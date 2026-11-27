@@ -5,7 +5,7 @@ import { DirectoryRobot } from "./directory-robot";
 
 type Point = { x: number; y: number };
 type Route = { start: Point; stop: Point; outboundBend: number; returnBend: number };
-const jumpMs = 780;
+const jumpMs = 900;
 const turnMs = 520;
 const waveMs = 1850;
 const patrolPatterns = [
@@ -18,7 +18,11 @@ function facing(from: Point, to: Point) {
   return Math.atan2(to.x - from.x, to.y - from.y);
 }
 
-function hop(from: Point, to: Point, bend: number, elapsed: number, jumps: number) {
+function normalHopsBeforeFlip() {
+  return 2 + Math.floor(Math.random() * 6);
+}
+
+function hop(from: Point, to: Point, bend: number, elapsed: number, jumps: number, shouldFlip: boolean) {
   const step = Math.min(jumps, elapsed / jumpMs);
   const landed = Math.floor(step);
   const beat = step - landed;
@@ -32,7 +36,7 @@ function hop(from: Point, to: Point, bend: number, elapsed: number, jumps: numbe
   const height = Math.min(16, 7 + stride * 0.2);
   const crouch = beat < takeoff ? Math.sin(Math.PI * beat / takeoff) : 0;
   const cushion = beat > landing ? Math.sin(Math.PI * (beat - landing) / (1 - landing)) : 0;
-  const flipTime = Math.max(0, Math.min(1, (flight - 0.08) / 0.84));
+  const flipTime = shouldFlip ? Math.max(0, Math.min(1, (flight - 0.08) / 0.84)) : 0;
   const flipProgress = flipTime * flipTime * (3 - 2 * flipTime);
   const flipDirection = Math.sign(to.x - from.x) || Math.sign(to.y - from.y);
   const tuck = Math.sin(Math.PI * flipProgress);
@@ -103,12 +107,20 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
     let phase = "";
     let frame = 0;
     let patternIndex = 0;
+    const tricks = buttons.map(() => ({ lastHop: 0, remaining: normalHopsBeforeFlip(), flip: false }));
+
+    const resetHopKeys = () => {
+      for (const trick of tricks) trick.lastHop = 0;
+    };
 
     const measure = () => {
       const next = first.offsetWidth
         ? patrolRoutes(area.clientWidth, area.clientHeight, first, buddy.offsetWidth > 0, patrolPatterns[patternIndex])
         : [];
-      if (routes.length !== next.length) elapsed = 0;
+      if (routes.length !== next.length) {
+        elapsed = 0;
+        resetHopKeys();
+      }
       routes = next;
       jumps = Math.max(1, ...routes.map(({ start, stop }) => Math.ceil(Math.hypot(stop.x - start.x, stop.y - start.y) / 46)));
       phase = "";
@@ -140,6 +152,7 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
       if (elapsed >= round) {
         elapsed -= round;
         patternIndex = (patternIndex + 1) % patrolPatterns.length;
+        resetHopKeys();
         measure();
         return;
       }
@@ -159,10 +172,20 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
           }),
         });
       }
+      const legElapsed = returning ? elapsed - leg - pause : elapsed;
+      const moving = legElapsed < leg;
+      // One decision per hop. The signed key distinguishes the outward and return legs.
+      const hopKey = (Math.floor(legElapsed / jumpMs) + 1) * (returning ? -1 : 1);
       routes.forEach(({ start, stop, outboundBend, returnBend }, index) => {
+        const trick = tricks[index];
+        if (moving && trick.lastHop !== hopKey) {
+          trick.lastHop = hopKey;
+          trick.flip = trick.remaining === 0;
+          trick.remaining = trick.flip ? normalHopsBeforeFlip() : trick.remaining - 1;
+        }
         const position = returning
-          ? hop(stop, start, returnBend, elapsed - leg - pause, jumps)
-          : hop(start, stop, outboundBend, elapsed, jumps);
+          ? hop(stop, start, returnBend, legElapsed, jumps, moving && trick.flip)
+          : hop(start, stop, outboundBend, legElapsed, jumps, moving && trick.flip);
         buttons[index].style.setProperty("--robot-position", `${position.x.toFixed(2)}px ${position.y.toFixed(2)}px`);
         buttons[index].style.setProperty("--robot-hop-scale", `${position.scaleX.toFixed(3)} ${position.scaleY.toFixed(3)}`);
         buttons[index].style.setProperty("--robot-flip", `${position.flip.toFixed(2)}deg`);
