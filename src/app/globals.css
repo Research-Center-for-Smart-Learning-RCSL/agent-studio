@@ -490,16 +490,27 @@ a {
   display: none;
 }
 
+/* Narrow columns are sized to their content so the Agent column, which holds the name and a 53-character ID, takes the rest. */
 .agent-scope-column {
-  width: 27%;
+  width: 22%;
 }
 
 .agent-version-column {
-  width: 21%;
+  width: 170px;
 }
 
 .agent-updated-column {
-  width: 18%;
+  width: 150px;
+}
+
+/* width: 0 with min-width: 100% keeps the ID from widening the column, so it truncates instead of forcing the table wider. */
+.agent-id {
+  display: block;
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-versions {
