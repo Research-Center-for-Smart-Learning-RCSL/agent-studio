@@ -2,7 +2,7 @@
 import { formatTaipei } from "@/lib/format-time";
 import { runtimeFunctionNames, runtimeFunctions } from "@/lib/runtime-functions";
 import { useI18n } from "@/lib/i18n-client";
-import { isCostlyModel, startsInManualMode, type ModelPreset } from "@/lib/models";
+import { modelWarning, startsInManualMode, type ModelPreset } from "@/lib/models";
 import { DirectoryRobot } from "../../directory-robot";
 import { readDirectoryView } from "../../directory-view";
 
@@ -557,6 +557,7 @@ function ModelSettings(props: {
   const [rawError, setRawError] = useState<string | null>(null);
   const [manual, setManual] = useState(() => startsInManualMode(props.model, props.presets));
   const selectValue = manual ? MANUAL_MODEL : props.model || undefined;
+  const warning = modelWarning(props.model, props.presets);
 
   return (
     <Form layout="vertical" disabled={props.readOnly} style={{ maxWidth: 560 }}>
@@ -590,12 +591,12 @@ function ModelSettings(props: {
             style={{ marginTop: 8 }}
           />
         )}
-        {isCostlyModel(props.model, props.presets) && (
+        {warning && (
           <Alert
             type="warning"
             showIcon
             style={{ marginTop: 8 }}
-            title={t("這個模型的費用可能較高，請確認用量後再使用。")}
+            title={warning === "costly" ? t("這個模型的費用可能較高，請確認用量後再使用。") : t("這個模型不在預設清單內，費用與是否可用未經確認，請自行確認。")}
           />
         )}
       </Form.Item>

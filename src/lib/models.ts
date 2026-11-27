@@ -43,3 +43,12 @@ export function startsInManualMode(model: string, presets: readonly ModelPreset[
 export function initialModel(presets: readonly ModelPreset[], fallback: string): string {
   return presets[0]?.model ?? fallback;
 }
+
+/**
+ * Which warning the editor shows for a model: a costly preset (also when typed by hand),
+ * or a model outside the presets, whose cost and availability nobody has confirmed.
+ */
+export function modelWarning(model: string, presets: readonly ModelPreset[]): "costly" | "unlisted" | null {
+  if (isCostlyModel(model, presets)) return "costly";
+  return startsInManualMode(model, presets) ? "unlisted" : null;
+}

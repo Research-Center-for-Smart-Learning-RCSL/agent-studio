@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialModel, isCostlyModel, isPresetModel, maxModelPresets, parseModelPresets, startsInManualMode, type ModelPreset } from "../src/lib/models";
+import { initialModel, isCostlyModel, modelWarning, isPresetModel, maxModelPresets, parseModelPresets, startsInManualMode, type ModelPreset } from "../src/lib/models";
 
 const presets: ModelPreset[] = [
   { model: "gpt-6-luna", costly: false },
@@ -62,5 +62,24 @@ describe("initialModel", () => {
 
   it("falls back when no preset is configured", () => {
     expect(initialModel([], "gpt-5.2")).toBe("gpt-5.2");
+  });
+});
+
+describe("modelWarning", () => {
+  it("warns about cost for a costly preset, also typed by hand", () => {
+    expect(modelWarning("gpt-6.3-sol", presets)).toBe("costly");
+    expect(modelWarning("GPT-6.3-SOL", presets)).toBe("costly");
+  });
+
+  it("warns that a manually entered model is unconfirmed", () => {
+    expect(modelWarning("gpt-5.2", presets)).toBe("unlisted");
+    expect(modelWarning("gpt-6-LUNA", presets)).toBe("unlisted");
+    expect(modelWarning("gpt-6-luna", [])).toBe("unlisted");
+  });
+
+  it("does not warn for a plain preset or an empty field", () => {
+    expect(modelWarning("gpt-6-luna", presets)).toBeNull();
+    expect(modelWarning("", presets)).toBeNull();
+    expect(modelWarning("   ", presets)).toBeNull();
   });
 });
