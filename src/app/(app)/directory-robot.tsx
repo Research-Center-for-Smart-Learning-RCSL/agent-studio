@@ -94,7 +94,8 @@ export function DirectoryRobot({ size = "default", variant = "directory", greeti
       const laneBounds = lane.getBoundingClientRect();
       const modelBounds = model.getBoundingClientRect();
       const flatBounds = flatRobot.current?.getBoundingClientRect() ?? modelBounds;
-      const anchor = scene.current?.getBubbleAnchor();
+      const flipping = sidebar && Boolean(parseFloat(button.current?.style.getPropertyValue("--robot-flip") ?? ""));
+      const anchor = flipping ? undefined : scene.current?.getBubbleAnchor();
       const x = anchor ? modelBounds.left + anchor.x * modelBounds.width : (flatBounds.left + flatBounds.right) / 2;
       const top = anchor ? modelBounds.top + anchor.top * modelBounds.height : flatBounds.top;
       const bottom = anchor ? modelBounds.top + anchor.bottom * modelBounds.height : flatBounds.bottom;

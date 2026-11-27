@@ -32,13 +32,18 @@ function hop(from: Point, to: Point, bend: number, elapsed: number, jumps: numbe
   const height = Math.min(16, 7 + stride * 0.2);
   const crouch = beat < takeoff ? Math.sin(Math.PI * beat / takeoff) : 0;
   const cushion = beat > landing ? Math.sin(Math.PI * (beat - landing) / (1 - landing)) : 0;
-  const stretch = arc * 0.045 - crouch * 0.095 - cushion * 0.125;
+  const flipTime = Math.max(0, Math.min(1, (flight - 0.08) / 0.84));
+  const flipProgress = flipTime * flipTime * (3 - 2 * flipTime);
+  const flipDirection = Math.sign(to.x - from.x) || Math.sign(to.y - from.y);
+  const tuck = Math.sin(Math.PI * flipProgress);
+  const stretch = arc * 0.045 - tuck * 0.15 - crouch * 0.095 - cushion * 0.125;
   const remaining = 1 - progress;
   return {
     x: remaining * remaining * from.x + 2 * remaining * progress * bend + progress * progress * to.x,
     y: Math.max(0, from.y + (to.y - from.y) * progress - arc * height),
     scaleX: 1 - stretch * 0.48,
     scaleY: 1 + stretch,
+    flip: flipProgress === 1 ? 0 : flipProgress * 360 * flipDirection,
   };
 }
 
@@ -120,6 +125,7 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
           for (const button of buttons) {
             button.style.removeProperty("--robot-position");
             button.style.removeProperty("--robot-hop-scale");
+            button.style.removeProperty("--robot-flip");
           }
           setPose({ greeting: false, angles: [0, 0] });
         }
@@ -159,6 +165,7 @@ export function SidebarRobots({ drawerOpen }: { drawerOpen: boolean }) {
           : hop(start, stop, outboundBend, elapsed, jumps);
         buttons[index].style.setProperty("--robot-position", `${position.x.toFixed(2)}px ${position.y.toFixed(2)}px`);
         buttons[index].style.setProperty("--robot-hop-scale", `${position.scaleX.toFixed(3)} ${position.scaleY.toFixed(3)}`);
+        buttons[index].style.setProperty("--robot-flip", `${position.flip.toFixed(2)}deg`);
       });
     };
 
