@@ -410,6 +410,11 @@ a {
   background: #fff;
 }
 
+.agent-open-links {
+  display: inline-flex;
+  gap: 6px;
+}
+
 .directory-panel .agent-open-column {
   text-align: end;
   padding-inline-end: 24px;

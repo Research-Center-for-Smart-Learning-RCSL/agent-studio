@@ -41,6 +41,7 @@ export function AgentList({
   includeArchived,
   hasAnyAccess,
   userEmail,
+  logsEnabled,
 }: {
   rows: Row[];
   projects: Project[];
@@ -48,6 +49,7 @@ export function AgentList({
   includeArchived: boolean;
   hasAnyAccess: boolean;
   userEmail: string;
+  logsEnabled: boolean;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -177,6 +179,7 @@ export function AgentList({
 
             <AgentResults
               key={filterKey}
+              logsEnabled={logsEnabled}
               rows={filtered}
               hasFilters={hasFilters}
               restoredView={restoredView}
@@ -196,8 +199,9 @@ export function AgentList({
   );
 }
 
-function AgentResults({ rows, hasFilters, restoredView, context }: {
+function AgentResults({ rows, hasFilters, restoredView, context, logsEnabled }: {
   rows: Row[];
+  logsEnabled: boolean;
   hasFilters: boolean;
   restoredView: DirectoryView | null;
   context: DirectoryContext;
@@ -322,14 +326,21 @@ function AgentResults({ rows, hasFilters, restoredView, context }: {
             key: "open",
             className: "agent-open-column",
             render: (_, row) => (
-              <Link
-                className="agent-open"
-                href={`/agents/${row.id}`}
-                aria-label={t("查看 {0}", [row.name])}
-                onNavigate={() => rememberDirectoryView(context, row.id, Math.min(visibleCount, rows.length), results.current)}
-              >
-                {t("查看")}<span aria-hidden="true"> ›</span>
-              </Link>
+              <div className="agent-open-links">
+                <Link
+                  className="agent-open"
+                  href={`/agents/${row.id}`}
+                  aria-label={t("查看 {0}", [row.name])}
+                  onNavigate={() => rememberDirectoryView(context, row.id, Math.min(visibleCount, rows.length), results.current)}
+                >
+                  {t("查看")}<span aria-hidden="true"> ›</span>
+                </Link>
+                {logsEnabled && (
+                  <Link className="agent-open agent-open-logs" href={`/logs?prompt=${encodeURIComponent(row.id)}`} aria-label={t("查看 {0} 的 Logs", [row.name])}>
+                    Logs<span aria-hidden="true"> ›</span>
+                  </Link>
+                )}
+              </div>
             ),
           },
         ]}

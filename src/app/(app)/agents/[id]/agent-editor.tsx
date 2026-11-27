@@ -45,6 +45,7 @@ function toolLabel(tool: Record<string, unknown>): string {
 
 export function AgentEditor(props: {
   userEmail: string;
+  logsEnabled: boolean;
   agent: {
     id: string;
     name: string;
@@ -197,6 +198,7 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
           agent={props.agent}
           canEdit={props.canEdit}
           userEmail={props.userEmail}
+          logsEnabled={props.logsEnabled}
           copyProjects={props.copyProjects}
           version={props.selected?.version}
           dirty={dirty}
@@ -278,7 +280,7 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
   );
 }
 
-function Header(props: Pick<Parameters<typeof AgentEditor>[0], "agent" | "canEdit" | "userEmail" | "copyProjects"> & {
+function Header(props: Pick<Parameters<typeof AgentEditor>[0], "agent" | "canEdit" | "userEmail" | "logsEnabled" | "copyProjects"> & {
   version: number | undefined;
   dirty: boolean;
 }) {
@@ -345,9 +347,16 @@ function Header(props: Pick<Parameters<typeof AgentEditor>[0], "agent" | "canEdi
           </Dropdown>
         )}
       </div>
-      <Typography.Text copyable type="secondary" style={{ fontSize: 12 }}>
-        {props.agent.id}
-      </Typography.Text>
+      <Space size={12} wrap>
+        <Typography.Text copyable type="secondary" style={{ fontSize: 12 }}>
+          {props.agent.id}
+        </Typography.Text>
+        {props.logsEnabled && (
+          <Link href={`/logs?prompt=${encodeURIComponent(props.agent.id)}`} style={{ fontSize: 12 }}>
+            {t("查看此 Agent 的 Logs")} <span aria-hidden="true">›</span>
+          </Link>
+        )}
+      </Space>
       {props.agent.description && <Typography.Paragraph style={{ marginTop: 8 }}>{props.agent.description}</Typography.Paragraph>}
       {copying && props.version !== undefined && (
         <CopyAgentModal

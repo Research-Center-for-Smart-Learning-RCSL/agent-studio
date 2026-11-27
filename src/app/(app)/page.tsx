@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { organizations, projects } from "@/db/schema";
 import { listAgentsForProjects } from "@/lib/agents";
 import { can, requireUser } from "@/lib/authz";
+import { logsConfigured } from "@/lib/logs";
 import { AgentList } from "./agent-list";
 
 export default async function HomePage(props: PageProps<"/">) {
@@ -38,6 +39,7 @@ export default async function HomePage(props: PageProps<"/">) {
       includeArchived={includeArchived}
       hasAnyAccess={hasAnyAccess}
       userEmail={user.email}
+      logsEnabled={logsConfigured()}
     />
   );
 }

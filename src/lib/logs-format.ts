@@ -161,8 +161,8 @@ export function highlightParts(text: string, terms: string[]): { text: string; m
   return parts;
 }
 
-export type ListFilters = { q: string; runtime: string; robot: string; bookmarked: string; since: string; until: string; status: string; kind: string };
-export const emptyFilters: ListFilters = { q: "", runtime: "", robot: "", bookmarked: "", since: "", until: "", status: "", kind: "" };
+export type ListFilters = { q: string; runtime: string; robot: string; prompt: string; bookmarked: string; since: string; until: string; status: string; kind: string };
+export const emptyFilters: ListFilters = { q: "", runtime: "", robot: "", prompt: "", bookmarked: "", since: "", until: "", status: "", kind: "" };
 
 const day = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -171,6 +171,8 @@ export function filterParams(f: ListFilters): Record<string, string | boolean | 
   return {
     q: f.q.trim() || undefined,
     robot: f.robot.trim() || undefined,
+    // The agent's prompt id (pmpt_...); the API matches it exactly.
+    prompt: f.prompt.trim() || undefined,
     runtime: f.runtime === "web" || f.runtime === "robot" ? f.runtime : undefined,
     status: f.status === "ok" || f.status === "failed" || f.status === "no_response" ? f.status : undefined,
     kind: f.kind === "stt" || f.kind === "tts" ? f.kind : undefined,

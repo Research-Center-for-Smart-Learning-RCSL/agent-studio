@@ -68,6 +68,38 @@ function RobotSelect({ value, onChange }: { value: string; onChange: (robot: str
   );
 }
 
+type AgentOption = { prompt_id: string; org: string; project: string; name: string; version: string | null };
+
+/** Agents are picked by name; an id that is not among the listed agents is still matched by the id. */
+function AgentSelect({ value, onChange }: { value: string; onChange: (prompt: string) => void }) {
+  const { t } = useI18n();
+  const agents = useLogsResource<AgentOption[]>("/v1/agents");
+  const options = (agents.data ?? []).map((agent) => ({
+    value: agent.prompt_id,
+    label: agent.name,
+    where: [agent.org, agent.project].filter(Boolean).join(" / "),
+  }));
+  const known = options.find((option) => option.value === value);
+  return (
+    <Select
+      showSearch
+      allowClear
+      style={{ width: 220 }}
+      placeholder="Agent"
+      aria-label={t("依 Agent 篩選")}
+      loading={agents.loading}
+      value={value || undefined}
+      onChange={(prompt) => onChange(prompt ?? "")}
+      options={value && !known ? [{ value, label: value, where: "" }, ...options] : options}
+      popupMatchSelectWidth={440}
+      optionRender={(option) => (
+        <span>{option.label}{option.data.where && <span className={styles.sub}>{option.data.where}</span>}</span>
+      )}
+      filterOption={(input, option) => `${option?.label ?? ""} ${option?.where ?? ""} ${option?.value ?? ""}`.toLowerCase().includes(input.trim().toLowerCase())}
+    />
+  );
+}
+
 function CommitInput({ value, onCommit, ...props }: { value: string; onCommit: (value: string) => void } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange">) {
   const [draft, setDraft] = useState<{ from: string; text: string }>({ from: value, text: value });
   // A change from outside (Clear, Back) replaces what was being typed.
@@ -113,6 +145,7 @@ export function FilterBar({ filters, set, reset, bad, showStatus = false, showKi
             options={[{ value: "ok", label: t("成功") }, { value: "failed", label: t("失敗") }, { value: "no_response", label: t("無回應") }]}
           />
         )}
+        <AgentSelect value={filters.prompt} onChange={(prompt) => set({ prompt })} />
         <RobotSelect value={filters.robot} onChange={(robot) => set({ robot })} />
         <Input style={{ width: 150 }} type="date" value={filters.since} aria-label={t("起日")} onChange={(e) => set({ since: e.target.value })} />
         <Input style={{ width: 150 }} type="date" value={filters.until} aria-label={t("迄日")} onChange={(e) => set({ until: e.target.value })} />
