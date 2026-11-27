@@ -451,6 +451,11 @@ a {
   overflow-wrap: anywhere;
 }
 
+/* Fills the cell, so the truncated ID is as wide as the column rather than as wide as the name above it. */
+.agent-identity-text {
+  flex: 1;
+}
+
 .agent-icon {
   display: grid;
   flex: none;
@@ -537,7 +542,8 @@ a {
   color: #785114;
 }
 
-@media (width < 992px) {
+/* The sidebar takes about 306px, so the table is far narrower than the viewport. */
+@media (width < 1280px) {
   .directory-panel .agent-updated-column {
     display: none;
   }
