@@ -19,6 +19,7 @@ import { can, ForbiddenError, requireAdmin, requireManager, requireProjectRole, 
 import { canGrantSecret, canManageOrganization, canManageSecret, membershipOrganization, newSecretOwner, roleFitsScope } from "@/lib/org-admin";
 import { mcpServerUrl, validMcpCredentialField } from "@/lib/mcp-credentials";
 import { initialModel, parseModelPresets } from "@/lib/models";
+import { logEvent, shortMessage } from "@/lib/request-log";
 import { sanitizeTools, toRuntimeMessages } from "@/lib/openai-shape";
 import { syncFromRcsl } from "@/lib/rcsl";
 import { encryptSecret, validateToolSecrets } from "@/lib/secrets";
@@ -29,10 +30,17 @@ async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
   try {
     return { ok: true, data: await fn() };
   } catch (error) {
-    if (error instanceof ForbiddenError) return { ok: false, error: "沒有權限" };
-    if (error instanceof z.ZodError) return { ok: false, error: error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
+    if (error instanceof ForbiddenError) {
+      logEvent("action_failed", { kind: "forbidden" });
+      return { ok: false, error: "沒有權限" };
+    }
+    if (error instanceof z.ZodError) {
+      logEvent("action_failed", { kind: "validation", message: shortMessage(error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")) });
+      return { ok: false, error: error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
+    }
     // redirect() and notFound() must propagate.
     if (error && typeof error === "object" && "digest" in error) throw error;
+    logEvent("action_failed", { kind: "error", message: shortMessage(error) });
     return { ok: false, error: (error as Error).message };
   }
 }

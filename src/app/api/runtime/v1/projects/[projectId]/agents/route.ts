@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listAgentsForProjects } from "@/lib/agents";
+import { loggedRoute } from "@/lib/request-log";
 import { runtimeAuthorized, runtimeError } from "@/lib/runtime-api";
 
 /**
@@ -7,7 +8,7 @@ import { runtimeAuthorized, runtimeError } from "@/lib/runtime-api";
  * `/openai/prompts/<project_id>` (`id`, `name`, `default_version`) so the
  * runtime's agent selector reads them unchanged.
  */
-export async function GET(request: Request, ctx: RouteContext<"/api/runtime/v1/projects/[projectId]/agents">) {
+export const GET = loggedRoute("runtime.project_agents", async (request: Request, ctx: RouteContext<"/api/runtime/v1/projects/[projectId]/agents">) => {
   if (!runtimeAuthorized(request)) return runtimeError(401, "unauthorized");
   const { projectId } = await ctx.params;
   const rows = await listAgentsForProjects([projectId]);
@@ -22,4 +23,4 @@ export async function GET(request: Request, ctx: RouteContext<"/api/runtime/v1/p
       published: r.publishedVersion !== null,
     }));
   return NextResponse.json({ data }, { headers: { "Cache-Control": "no-store" } });
-}
+});

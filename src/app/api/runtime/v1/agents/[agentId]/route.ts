@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAgent, getEffectiveVersion, getVersion } from "@/lib/agents";
 import { toResponsesConfig } from "@/lib/openai-shape";
+import { loggedRoute } from "@/lib/request-log";
 import { runtimeAuthorized, runtimeError } from "@/lib/runtime-api";
 import { resolveToolSecrets } from "@/lib/secrets";
 
@@ -9,7 +10,7 @@ import { resolveToolSecrets } from "@/lib/secrets";
  * references in tools resolved. `?version=N` selects a version; otherwise
  * the published one is returned.
  */
-export async function GET(request: Request, ctx: RouteContext<"/api/runtime/v1/agents/[agentId]">) {
+export const GET = loggedRoute("runtime.agent", async (request: Request, ctx: RouteContext<"/api/runtime/v1/agents/[agentId]">) => {
   if (!runtimeAuthorized(request)) return runtimeError(401, "unauthorized");
   const { agentId } = await ctx.params;
   const found = await getAgent(agentId);
@@ -47,4 +48,4 @@ export async function GET(request: Request, ctx: RouteContext<"/api/runtime/v1/a
     },
     { headers: { "Cache-Control": "no-store" } },
   );
-}
+});
