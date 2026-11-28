@@ -596,7 +596,13 @@
     "依 Agent 篩選": "Filter by agent",
     "查看 {0} 的 Logs": "View logs of {0}",
     "查看此 Agent 的 Logs": "View this agent's logs",
-    "設定 {0}": "Configure {0}"
+    "設定 {0}": "Configure {0}",
+    "近 7 天 {0} 回合": "{0} turns in the last 7 days",
+    "近 7 天至少 {0} 回合": "At least {0} turns in the last 7 days",
+    "近 7 天沒有使用紀錄": "No use recorded in the last 7 days",
+    "失敗 {0}": "{0} failed",
+    "延遲中位數 {0} 秒": "Median latency {0} s",
+    "最近使用 {0}": "Last used {0}"
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1195,6 +1201,12 @@
     "依 Agent 篩選": "Filtruj według agenta",
     "查看 {0} 的 Logs": "Zobacz logi agenta {0}",
     "查看此 Agent 的 Logs": "Zobacz logi tego agenta",
-    "設定 {0}": "Konfiguruj {0}"
+    "設定 {0}": "Konfiguruj {0}",
+    "近 7 天 {0} 回合": "{0} tur w ostatnich 7 dniach",
+    "近 7 天至少 {0} 回合": "Co najmniej {0} tur w ostatnich 7 dniach",
+    "近 7 天沒有使用紀錄": "Brak użycia w ostatnich 7 dniach",
+    "失敗 {0}": "Błędy: {0}",
+    "延遲中位數 {0} 秒": "Mediana opóźnienia {0} s",
+    "最近使用 {0}": "Ostatnio użyto {0}"
   }
 }
