@@ -3,12 +3,21 @@
 # Run scripts/preflight.sh before every `up` (README.md, Deployment).
 name: agent-studio
 
+# json-file keeps container output forever by default. Cap it, so request logs
+# (docs/logging.md) cannot fill the disk; the limit applies when a container is recreated.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   app:
     build: .
     image: agent-studio:latest
     restart: unless-stopped
     env_file: .env
+    logging: *logging
     environment:
       DATABASE_URL: postgres://studio:${POSTGRES_PASSWORD}@db:5432/agent_studio
       AUTH_URL: https://studio.rcsl.online
@@ -24,6 +33,7 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: studio
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
