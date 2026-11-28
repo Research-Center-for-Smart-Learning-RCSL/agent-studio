@@ -1,12 +1,14 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { modelPresets, organizations, projects } from "@/db/schema";
 import { getAgent, getVersion, listVersions } from "@/lib/agents";
 import { can, requireUser } from "@/lib/authz";
-import { fetchAgentUsage, logsConfigured } from "@/lib/logs";
+import { logsConfigured } from "@/lib/logs";
 import { toolFileAvailable } from "@/lib/tool-file-credentials";
 import { AgentEditor, type ToolTemplate } from "./agent-editor";
+import { AgentUsageLine } from "./agent-usage-line";
 
 export default async function AgentPage(props: PageProps<"/agents/[id]">) {
   const user = await requireUser();
@@ -15,7 +17,6 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
   const found = await getAgent(id);
   if (!found || !can(user, found.agent.projectId, "viewer")) notFound();
 
-  const usagePromise = fetchAgentUsage(user, id);
   const versions = await listVersions(id);
   const selected =
     (typeof v === "string" && Number.isInteger(Number(v)) && (await getVersion(id, Number(v)))) ||
@@ -51,7 +52,13 @@ export default async function AgentPage(props: PageProps<"/agents/[id]">) {
       key={`${id}@${selected?.version ?? 0}`}
       userEmail={user.email}
       logsEnabled={logsConfigured()}
-      usage={await usagePromise}
+      usageSlot={
+        logsConfigured() ? (
+          <Suspense fallback={null}>
+            <AgentUsageLine user={user} agent={{ id: found.agent.id, projectId: found.agent.projectId }} />
+          </Suspense>
+        ) : null
+      }
       agent={{
         id: found.agent.id,
         name: found.agent.name,

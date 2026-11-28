@@ -26,21 +26,21 @@ import { encryptSecret, validateToolSecrets } from "@/lib/secrets";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
-async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
+async function run<T>(action: string, fn: () => Promise<T>): Promise<ActionResult<T>> {
   try {
     return { ok: true, data: await fn() };
   } catch (error) {
     if (error instanceof ForbiddenError) {
-      logEvent("action_failed", { kind: "forbidden" });
+      logEvent("action_failed", { action, kind: "forbidden" });
       return { ok: false, error: "沒有權限" };
     }
     if (error instanceof z.ZodError) {
-      logEvent("action_failed", { kind: "validation", message: shortMessage(error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")) });
+      logEvent("action_failed", { action, kind: "validation", message: shortMessage(error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")) });
       return { ok: false, error: error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
     }
     // redirect() and notFound() must propagate.
     if (error && typeof error === "object" && "digest" in error) throw error;
-    logEvent("action_failed", { kind: "error", message: shortMessage(error) });
+    logEvent("action_failed", { action, kind: "error", message: shortMessage(error) });
     return { ok: false, error: (error as Error).message };
   }
 }
@@ -88,7 +88,7 @@ async function projectOf(agentId: string) {
 }
 
 export async function saveVersionAction(agentId: string, input: unknown, publish: boolean) {
-  return run(async () => {
+  return run("saveVersionAction", async () => {
     const projectId = await projectOf(agentId);
     const user = await requireProjectRole(projectId, "editor");
     const version = await saveVersion(agentId, await validateVersion(projectId, input), user.email, publish);
@@ -98,7 +98,7 @@ export async function saveVersionAction(agentId: string, input: unknown, publish
 }
 
 export async function publishVersionAction(agentId: string, version: number) {
-  return run(async () => {
+  return run("publishVersionAction", async () => {
     const projectId = await projectOf(agentId);
     const user = await requireProjectRole(projectId, "editor");
     const stored = await getVersion(agentId, version);
@@ -110,7 +110,7 @@ export async function publishVersionAction(agentId: string, version: number) {
 }
 
 export async function updateAgentMetaAction(agentId: string, meta: { name: string; description: string }) {
-  return run(async () => {
+  return run("updateAgentMetaAction", async () => {
     const user = await requireProjectRole(await projectOf(agentId), "editor");
     const parsed = z.object({ name: z.string().trim().min(1), description: z.string().max(2000) }).parse(meta);
     await updateAgentMeta(agentId, parsed, user.email);
@@ -119,7 +119,7 @@ export async function updateAgentMetaAction(agentId: string, meta: { name: strin
 }
 
 export async function setArchivedAction(agentId: string, archived: boolean) {
-  return run(async () => {
+  return run("setArchivedAction", async () => {
     const user = await requireProjectRole(await projectOf(agentId), "editor");
     await setArchived(agentId, archived, user.email);
     revalidatePath(`/agents/${agentId}`);
@@ -128,7 +128,7 @@ export async function setArchivedAction(agentId: string, archived: boolean) {
 }
 
 export async function createAgentAction(projectId: string, name: string) {
-  return run(async () => {
+  return run("createAgentAction", async () => {
     const user = await requireProjectRole(projectId, "editor");
     const initial = await validateVersion(projectId, {
       model: await defaultModel(),
@@ -143,7 +143,7 @@ export async function createAgentAction(projectId: string, name: string) {
 }
 
 export async function copyAgentAction(agentId: string, version: number, targetProjectId?: string) {
-  return run(async () => {
+  return run("copyAgentAction", async () => {
     const user = await requireUser();
     const source = await getAgent(z.string().min(1).parse(agentId));
     if (!source || !can(user, source.agent.projectId, "viewer")) throw new ForbiddenError();
@@ -169,7 +169,7 @@ export async function copyAgentAction(agentId: string, version: number, targetPr
 // Admin
 
 export async function syncRcslAction() {
-  return run(async () => {
+  return run("syncRcslAction", async () => {
     const admin = await requireAdmin();
     const result = await syncFromRcsl();
     await db.insert(auditEvents).values({ actor: admin.email, action: "rcsl.sync", targetType: "system", targetId: "rcsl", detail: result });
@@ -190,7 +190,7 @@ function checkNotSelf(actor: CurrentUser, targetEmail: string) {
 }
 
 export async function addMembershipAction(input: { email: string; scope: "organization" | "project"; scopeId: string; role: "viewer" | "editor" | "manager" }) {
-  return run(async () => {
+  return run("addMembershipAction", async () => {
     const admin = await requireManager();
     const parsed = z
       .object({
@@ -218,7 +218,7 @@ export async function addMembershipAction(input: { email: string; scope: "organi
 }
 
 export async function removeMembershipAction(id: number) {
-  return run(async () => {
+  return run("removeMembershipAction", async () => {
     const admin = await requireManager();
     id = z.number().int().min(1).max(2_147_483_647).parse(id);
     const removed = await db.transaction(async (tx) => {
@@ -238,7 +238,7 @@ export async function removeMembershipAction(id: number) {
 }
 
 export async function deleteUserAction(email: string) {
-  return run(async () => {
+  return run("deleteUserAction", async () => {
     const admin = await requireAdmin();
     const target = z.string().trim().toLowerCase().email().parse(email);
     if (target === admin.email) throw new Error("不能刪除自己的帳號");
@@ -252,7 +252,7 @@ export async function deleteUserAction(email: string) {
 }
 
 export async function setAdminAction(email: string, isAdmin: boolean) {
-  return run(async () => {
+  return run("setAdminAction", async () => {
     const admin = await requireAdmin();
     const target = z.string().trim().toLowerCase().email().parse(email);
     if (target === admin.email && !isAdmin) throw new Error("不能移除自己的管理員身分");
@@ -263,7 +263,7 @@ export async function setAdminAction(email: string, isAdmin: boolean) {
 }
 
 export async function setSecretAction(input: { name: string; value: string; description: string; organizationId?: string | null }) {
-  return run(async () => {
+  return run("setSecretAction", async () => {
     const admin = await requireManager();
     const parsed = z
       .object({
@@ -295,7 +295,7 @@ export async function setSecretAction(input: { name: string; value: string; desc
 }
 
 export async function deleteSecretAction(name: string) {
-  return run(async () => {
+  return run("deleteSecretAction", async () => {
     const admin = await requireManager();
     name = z.string().min(1).max(200).parse(name);
     const owner = await db.transaction(async (tx) => {
@@ -311,7 +311,7 @@ export async function deleteSecretAction(name: string) {
 }
 
 export async function setSecretGrantAction(name: string, input: SecretGrant, enabled: boolean) {
-  return run(async () => {
+  return run("setSecretGrantAction", async () => {
     const admin = await requireManager();
     name = z.string().min(1).max(200).parse(name);
     const grant = z.strictObject({
@@ -348,7 +348,7 @@ export async function setSecretGrantAction(name: string, input: SecretGrant, ena
 
 /** Replaces the editor's model dropdown with the submitted list, in the submitted order. */
 export async function saveModelPresetsAction(input: unknown) {
-  return run(async () => {
+  return run("saveModelPresetsAction", async () => {
     const admin = await requireAdmin();
     const list = parseModelPresets(input);
     await db.transaction(async (tx) => {

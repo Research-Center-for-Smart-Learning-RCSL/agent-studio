@@ -46,3 +46,46 @@ export function parseUsageTurns(body: unknown): UsageTurn[] | null {
     return [{ started_at, status, latency_ms: typeof latency_ms === "number" ? latency_ms : null }];
   });
 }
+
+type Translate = (key: string, args?: (string | number)[]) => string;
+
+/**
+ * The pieces of the usage line. Every `t()` takes a literal so the translation coverage test sees it.
+ * With a full page the other figures cover only the newest turns, which the first piece says.
+ */
+export function usageParts(usage: AgentUsage, t: Translate, formatTime: (iso: string) => string): string[] {
+  if (usage.turns === 0) return [t("近 7 天沒有使用紀錄")];
+  const parts = [
+    usage.capped
+      ? t("近 7 天至少 {0} 回合，以下數據只涵蓋最近 {1} 回合", [usage.turns, usage.turns])
+      : t("近 7 天回合數 {0}", [usage.turns]),
+  ];
+  if (usage.failures > 0) parts.push(t("失敗 {0}", [usage.failures]));
+  if (usage.medianLatencyMs !== null) parts.push(t("延遲中位數 {0} 秒", [(usage.medianLatencyMs / 1000).toFixed(1)]));
+  if (usage.lastAt) parts.push(t("最近使用 {0}", [formatTime(usage.lastAt)]));
+  return parts;
+}
+
+/** A small in-memory cache with a lifetime per entry and a size bound, so a stalled or heavy source is asked rarely. */
+export class TtlCache<V> {
+  private readonly entries = new Map<string, { until: number; value: V }>();
+  constructor(private readonly maxEntries: number, private readonly now: () => number = () => Date.now()) {}
+
+  get(key: string): { value: V } | undefined {
+    const entry = this.entries.get(key);
+    if (!entry) return undefined;
+    if (entry.until <= this.now()) {
+      this.entries.delete(key);
+      return undefined;
+    }
+    return { value: entry.value };
+  }
+
+  set(key: string, value: V, ttlMs: number) {
+    if (this.entries.size >= this.maxEntries && !this.entries.has(key)) {
+      const oldest = this.entries.keys().next().value;
+      if (oldest !== undefined) this.entries.delete(oldest);
+    }
+    this.entries.set(key, { until: this.now() + ttlMs, value });
+  }
+}
