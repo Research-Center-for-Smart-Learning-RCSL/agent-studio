@@ -3,6 +3,7 @@ import { formatTaipei } from "@/lib/format-time";
 import { runtimeFunctionNames, runtimeFunctions } from "@/lib/runtime-functions";
 import { useI18n } from "@/lib/i18n-client";
 import { modelWarning, startsInManualMode, type ModelPreset } from "@/lib/models";
+import { hasLocalShell } from "@/lib/tool-warnings";
 import { DirectoryRobot } from "../../directory-robot";
 import { readDirectoryView } from "../../directory-view";
 
@@ -893,6 +894,14 @@ function ToolsEditor(props: {
 
   return (
     <>
+      {hasLocalShell(props.tools) && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title={t("Shell 工具的執行環境是 local：網頁聊天與實體裝置都不會執行 local shell，模型要求的指令不會被執行。請改用 OpenAI 代管的環境（container_auto）。")}
+        />
+      )}
       <section className="available-tools-section">
         <Typography.Title level={5}>{t("可用工具")}</Typography.Title>
         <Typography.Paragraph type="secondary">{t("展開分類，使用開關管理工具。")}</Typography.Paragraph>

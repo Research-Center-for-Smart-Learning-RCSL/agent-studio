@@ -602,7 +602,8 @@
     "延遲中位數 {0} 秒": "Median latency {0} s",
     "最近使用 {0}": "Last used {0}",
     "近 7 天回合數 {0}": "Turns in the last 7 days: {0}",
-    "近 7 天至少 {0} 回合，以下數據只涵蓋最近 {1} 回合": "At least {0} turns in the last 7 days; the figures below cover only the latest {1}"
+    "近 7 天至少 {0} 回合，以下數據只涵蓋最近 {1} 回合": "At least {0} turns in the last 7 days; the figures below cover only the latest {1}",
+    "Shell 工具的執行環境是 local：網頁聊天與實體裝置都不會執行 local shell，模型要求的指令不會被執行。請改用 OpenAI 代管的環境（container_auto）。": "The shell tool's environment is local: neither the web chat nor the physical devices run a local shell, so commands the model asks for are not executed. Use an OpenAI-hosted environment (container_auto) instead."
   },
   "pl": {
     "以下發布版本需要 MCP 憑證授權": "Opublikowane wersje wymagające poświadczeń MCP",
@@ -1207,6 +1208,7 @@
     "延遲中位數 {0} 秒": "Mediana opóźnienia {0} s",
     "最近使用 {0}": "Ostatnio użyto {0}",
     "近 7 天回合數 {0}": "Tury w ostatnich 7 dniach: {0}",
-    "近 7 天至少 {0} 回合，以下數據只涵蓋最近 {1} 回合": "Co najmniej {0} tur w ostatnich 7 dniach; poniższe dane obejmują tylko ostatnie {1}"
+    "近 7 天至少 {0} 回合，以下數據只涵蓋最近 {1} 回合": "Co najmniej {0} tur w ostatnich 7 dniach; poniższe dane obejmują tylko ostatnie {1}",
+    "Shell 工具的執行環境是 local：網頁聊天與實體裝置都不會執行 local shell，模型要求的指令不會被執行。請改用 OpenAI 代管的環境（container_auto）。": "Środowisko narzędzia shell to local: ani czat w przeglądarce, ani urządzenia fizyczne nie uruchamiają lokalnej powłoki, więc polecenia żądane przez model nie zostaną wykonane. Użyj środowiska hostowanego przez OpenAI (container_auto)."
   }
 }
