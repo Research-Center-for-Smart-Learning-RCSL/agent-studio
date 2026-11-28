@@ -13,14 +13,39 @@ export function setLogSink(next: LogSink | null) {
   sink = next ?? ((line) => console.log(line));
 }
 
+const persistKey = Symbol.for("agent-studio.request-log.persist");
+type PersistHook = (entry: Record<string, unknown>) => void;
+
+/**
+ * Where lines are also stored for the admin page. Held on globalThis because Next may bundle the instrumentation
+ * hook and the route handlers as separate module instances.
+ */
+export function setPersistHook(hook: PersistHook | null) {
+  (globalThis as Record<symbol, unknown>)[persistKey] = hook ?? undefined;
+}
+
 export function logEvent(event: string, fields: Record<string, unknown> = {}) {
   const entry: Record<string, unknown> = { ts: new Date().toISOString(), event, ...fields };
   for (const key of Object.keys(entry)) if (entry[key] === undefined || entry[key] === null) delete entry[key];
   sink(JSON.stringify(entry));
+  const persist = (globalThis as Record<symbol, unknown>)[persistKey] as PersistHook | undefined;
+  try {
+    persist?.(entry);
+  } catch {
+    // Storing a line must never break the request that produced it.
+  }
+}
+
+/**
+ * A string safe for a log line and for a PostgreSQL text or jsonb value: no line breaks, and no NUL or unpaired
+ * surrogate (a cut emoji), which PostgreSQL rejects and which would then fail a whole batch of rows.
+ */
+export function cleanText(text: string): string {
+  return text.toWellFormed().replace(/\u0000/g, "");
 }
 
 function oneLine(text: string, max: number): string {
-  return text.replace(/\s+/g, " ").slice(0, max);
+  return cleanText(text.replace(/\s+/g, " ").slice(0, max));
 }
 
 /** The five-character SQLSTATE of a database error, on the error itself (pg) or on its cause (Drizzle). */
