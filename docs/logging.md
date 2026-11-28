@@ -1,6 +1,6 @@
 # Request logging
 
-Studio writes one JSON object per line to the container's output, so `docker logs agent-studio-app-1` can be filtered with grep or jq. The code is `src/lib/request-log.ts`, `src/instrumentation.ts` and the wrapper on the runtime routes. No line holds a token, a key, a cookie, a query string or the values of a failed database query.
+Studio writes one JSON object per line to the container's output, so `docker logs agent-studio-app-1` can be filtered with grep or jq. The code is `src/lib/request-log.ts`, `src/instrumentation.ts` and the wrapper on the runtime routes. None of these JSON lines holds a token, a key, a cookie, a query string or the values of a failed database query. Output that Next.js writes itself is not covered; see Database errors.
 
 ## Events
 
@@ -16,7 +16,7 @@ Pages and static assets are not logged as requests; only their errors are, throu
 
 ## Database errors
 
-Drizzle puts the SQL text and the parameter values into the message of a failed query, and PostgreSQL messages quote the offending value, so a database error is logged as `database query failed (<SQLSTATE>)` and nothing else. The five-character SQLSTATE, for example `23505` for a unique violation, is read from the error or its cause. Look up the failing statement in the application code or the database's own log. The message that a failed server action returns to the browser is a separate path and is not covered by this.
+Drizzle puts the SQL text and the parameter values into the message of a failed query, and PostgreSQL messages quote the offending value, so a database error is logged as `database query failed (<SQLSTATE>)` and nothing else. The five-character SQLSTATE, for example `23505` for a unique violation, is read from the error or its cause. Look up the failing statement in the application code or the database's own log. Two paths are outside this guarantee. The message that a failed server action returns to the browser is separate. And Next.js prints uncaught server errors to stderr itself: in `next dev` that output contains the failed SQL and its parameter values, and the dev access log prints full URLs with their query strings. Whether `next start` in the container does the same was not tested, because the production log had no database error to look at, so treat `docker logs ... 2>&1` as possibly holding such text and filter on the JSON lines (`grep '^{'`) when sharing it.
 
 ## Recent-use line
 
