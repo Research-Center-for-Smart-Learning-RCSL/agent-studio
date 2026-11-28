@@ -1,5 +1,4 @@
 "use client";
-import type { AgentUsage } from "@/lib/agent-usage";
 import { formatTaipei } from "@/lib/format-time";
 import { runtimeFunctionNames, runtimeFunctions } from "@/lib/runtime-functions";
 import { useI18n } from "@/lib/i18n-client";
@@ -7,7 +6,7 @@ import { modelWarning, startsInManualMode, type ModelPreset } from "@/lib/models
 import { DirectoryRobot } from "../../directory-robot";
 import { readDirectoryView } from "../../directory-view";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -48,8 +47,8 @@ function toolLabel(tool: Record<string, unknown>): string {
 export function AgentEditor(props: {
   userEmail: string;
   logsEnabled: boolean;
-  /** Recent use read from Logs; null when Logs is off or unreachable. */
-  usage: AgentUsage | null;
+  /** The recent-use line; it streams in, so the editor does not wait for Logs. */
+  usageSlot: ReactNode;
   agent: {
     id: string;
     name: string;
@@ -205,7 +204,7 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
           canEdit={props.canEdit}
           userEmail={props.userEmail}
           logsEnabled={props.logsEnabled}
-          usage={props.usage}
+          usageSlot={props.usageSlot}
           copyProjects={props.copyProjects}
           version={props.selected?.version}
           dirty={dirty}
@@ -288,20 +287,11 @@ function EditorInner(props: Parameters<typeof AgentEditor>[0]) {
   );
 }
 
-function usageParts(usage: AgentUsage, t: (key: string, args?: (string | number)[]) => string, locale: string): string[] {
-  if (usage.turns === 0) return [t("近 7 天沒有使用紀錄")];
-  const parts = [t(usage.capped ? "近 7 天至少 {0} 回合" : "近 7 天 {0} 回合", [usage.turns])];
-  if (usage.failures > 0) parts.push(t("失敗 {0}", [usage.failures]));
-  if (usage.medianLatencyMs !== null) parts.push(t("延遲中位數 {0} 秒", [(usage.medianLatencyMs / 1000).toFixed(1)]));
-  if (usage.lastAt) parts.push(t("最近使用 {0}", [formatTaipei(usage.lastAt, locale, false)]));
-  return parts;
-}
-
-function Header(props: Pick<Parameters<typeof AgentEditor>[0], "agent" | "canEdit" | "userEmail" | "logsEnabled" | "usage" | "copyProjects"> & {
+function Header(props: Pick<Parameters<typeof AgentEditor>[0], "agent" | "canEdit" | "userEmail" | "logsEnabled" | "usageSlot" | "copyProjects"> & {
   version: number | undefined;
   dirty: boolean;
 }) {
-  const { t, error, locale } = useI18n();
+  const { t, error } = useI18n();
   const router = useRouter();
   const { message } = App.useApp();
   const [editing, setEditing] = useState(false);
@@ -374,11 +364,7 @@ function Header(props: Pick<Parameters<typeof AgentEditor>[0], "agent" | "canEdi
           </Link>
         )}
       </Space>
-      {props.usage && (
-        <Typography.Text type="secondary" style={{ display: "block", fontSize: 12, marginTop: 4 }}>
-          {usageParts(props.usage, t, locale).join(" · ")}
-        </Typography.Text>
-      )}
+      {props.usageSlot}
       {props.agent.description && <Typography.Paragraph style={{ marginTop: 8 }}>{props.agent.description}</Typography.Paragraph>}
       {copying && props.version !== undefined && (
         <CopyAgentModal
