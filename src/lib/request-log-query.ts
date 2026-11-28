@@ -32,6 +32,21 @@ export function parseLogQuery(params: URLSearchParams): LogQuery {
   };
 }
 
+export type PageRequest = {
+  /** Bumped by every reload and every filter change. */
+  generation: number;
+  /** The id of the last row shown when a "load more" was sent; null for a first page. */
+  cursor: number | null;
+};
+
+/**
+ * Whether an answer still belongs to what is on screen: the same reload generation, and for "load more" the same last
+ * row. Without this, a refresh that lands first, or a filter change, would let an old page join the wrong list.
+ */
+export function responseStillWanted(sent: PageRequest, now: PageRequest): boolean {
+  return sent.generation === now.generation && sent.cursor === now.cursor;
+}
+
 /** Escapes the characters a LIKE pattern treats specially, so a search for "50%" finds "50%". */
 export function likePattern(search: string): string {
   return `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;

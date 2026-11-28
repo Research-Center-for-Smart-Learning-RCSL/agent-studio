@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Button, Checkbox, Input, Segmented, Select, Space, Switch, Table, Tag, Typography } from "antd";
 import { useI18n } from "@/lib/i18n-client";
 import { formatTaipei } from "@/lib/format-time";
-import { logPageSize } from "@/lib/request-log-query";
+import { logPageSize, responseStillWanted, type PageRequest } from "@/lib/request-log-query";
 
 type Entry = {
   id: number;
@@ -41,10 +41,14 @@ export function RequestLogsTab() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
-  const latest = useRef(0);
+  const generation = useRef(0);
+  const busy = useRef(false);
+  const lastId = useRef<number | null>(null);
   const loadedRows = useRef(0);
+  const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
     loadedRows.current = rows.length;
+    lastId.current = rows.length ? rows[rows.length - 1].id : null;
   }, [rows]);
 
   const query = useCallback(
@@ -59,56 +63,100 @@ export function RequestLogsTab() {
     [source, range, event, errorsOnly, applied],
   );
 
-  const load = useCallback(
-    async (more = false) => {
-      const ticket = ++latest.current;
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/admin/request-logs?${query(more ? rows[rows.length - 1]?.id : undefined)}`, { cache: "no-store" });
-        if (!response.ok) throw new Error(String(response.status));
-        const result = (await response.json()) as Result;
-        if (ticket !== latest.current) return;
-        setRows((previous) => (more ? [...previous, ...result.rows] : result.rows));
-        setSummary(result.summary);
-        setHasMore(result.hasMore);
-        setError(undefined);
-      } catch (failure) {
-        if (ticket === latest.current) setError((failure as Error).message);
-      } finally {
-        if (ticket === latest.current) setLoading(false);
-      }
+  const fetchPage = useCallback(
+    async (before?: number) => {
+      const response = await fetch(`/api/admin/request-logs?${query(before)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(String(response.status));
+      return (await response.json()) as Result;
     },
-    [query, rows],
+    [query],
   );
+
+  /** Loads the first page. A newer reload, or a filter change, makes this answer stale. */
+  const loadFirst = useCallback(async () => {
+    const sent: PageRequest = { generation: ++generation.current, cursor: null };
+    busy.current = true;
+    setLoading(true);
+    try {
+      const result = await fetchPage();
+      if (!responseStillWanted(sent, { generation: generation.current, cursor: null })) return;
+      setRows(result.rows);
+      setSummary(result.summary);
+      setHasMore(result.hasMore);
+      setError(undefined);
+    } catch (failure) {
+      if (responseStillWanted(sent, { generation: generation.current, cursor: null })) setError((failure as Error).message);
+    } finally {
+      if (sent.generation === generation.current) {
+        busy.current = false;
+        setLoading(false);
+      }
+    }
+  }, [fetchPage]);
+
+  /** Appends the page after the last row shown; it never cancels or replaces a reload. */
+  const loadMore = useCallback(async () => {
+    const cursor = lastId.current;
+    if (cursor === null || busy.current) return;
+    const sent: PageRequest = { generation: generation.current, cursor };
+    busy.current = true;
+    setLoading(true);
+    try {
+      const result = await fetchPage(cursor);
+      if (!responseStillWanted(sent, { generation: generation.current, cursor: lastId.current })) return;
+      setRows((previous) => [...previous, ...result.rows]);
+      setHasMore(result.hasMore);
+      setError(undefined);
+    } catch (failure) {
+      if (responseStillWanted(sent, { generation: generation.current, cursor: lastId.current })) setError((failure as Error).message);
+    } finally {
+      if (sent.generation === generation.current) {
+        busy.current = false;
+        setLoading(false);
+      }
+    }
+  }, [fetchPage]);
+
+  /** A filter change drops what is shown at once, so "load more" can never continue the old list under the new filters. */
+  const changeFilter = (apply: () => void) => {
+    generation.current += 1;
+    busy.current = false;
+    setRows([]);
+    setHasMore(false);
+    apply();
+  };
 
   // Reload whenever a filter changes.
   useEffect(() => {
-    const timer = setTimeout(() => void load(false), 0);
+    const timer = setTimeout(() => void loadFirst(), 0);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, range, event, errorsOnly, applied]);
+  }, [loadFirst]);
 
   useEffect(() => {
     if (!auto) return;
-    // A refresh reloads the first page; it must not throw away rows the person paged in.
+    // A refresh reloads the first page, so it waits while another request runs, skips a list the person paged
+    // further into, and does nothing while this tab is not on screen (a hidden pane or another browser tab).
     const timer = setInterval(() => {
-      if (loadedRows.current <= logPageSize) void load(false);
+      const visible = !document.hidden && container.current !== null && container.current.offsetParent !== null;
+      if (visible && !busy.current && loadedRows.current <= logPageSize) void loadFirst();
     }, 10_000);
     return () => clearInterval(timer);
-  }, [auto, load]);
+  }, [auto, loadFirst]);
 
   const total = summary.reduce((sum, s) => sum + s.total, 0);
   const failures = summary.reduce((sum, s) => sum + s.failures, 0);
 
   return (
+    <div ref={container}>
     <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
       <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
         {t("Studio 與後端裝置端點的請求與錯誤紀錄，保留 30 天。內容含呼叫端位址與金鑰指紋，僅系統管理員可見。")}
       </Typography.Paragraph>
       <Space wrap>
         <Segmented
+          aria-label={t("來源")}
           value={source}
-          onChange={(value) => setSource(String(value))}
+          onChange={(value) => changeFilter(() => setSource(String(value)))}
           options={[
             { value: "all", label: t("全部") },
             { value: "studio", label: "Studio" },
@@ -118,7 +166,7 @@ export function RequestLogsTab() {
         <Select
           aria-label={t("時間範圍")}
           value={range}
-          onChange={setRange}
+          onChange={(value) => changeFilter(() => setRange(value))}
           style={{ width: 120 }}
           options={[
             { value: "1h", label: t("近 1 小時") },
@@ -132,11 +180,11 @@ export function RequestLogsTab() {
           aria-label={t("事件")}
           placeholder={t("事件")}
           value={event}
-          onChange={setEvent}
+          onChange={(value) => changeFilter(() => setEvent(value))}
           style={{ width: 180 }}
           options={events.map((value) => ({ value, label: value }))}
         />
-        <Checkbox checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)}>
+        <Checkbox checked={errorsOnly} onChange={(e) => changeFilter(() => setErrorsOnly(e.target.checked))}>
           {t("只看錯誤")}
         </Checkbox>
         <Input.Search
@@ -146,12 +194,16 @@ export function RequestLogsTab() {
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            if (e.target.value === "") setApplied("");
+            if (e.target.value === "" && applied !== "") changeFilter(() => setApplied(""));
           }}
-          onSearch={(value) => setApplied(value.trim())}
+          onSearch={(value) => {
+            const next = value.trim();
+            if (next === applied) void loadFirst();
+            else changeFilter(() => setApplied(next));
+          }}
           style={{ width: 280 }}
         />
-        <Button onClick={() => void load(false)} loading={loading}>
+        <Button onClick={() => void loadFirst()} loading={loading}>
           {t("重新整理")}
         </Button>
         <Space size={4}>
@@ -191,10 +243,11 @@ export function RequestLogsTab() {
         ]}
       />
       {hasMore && (
-        <Button onClick={() => void load(true)} loading={loading}>
+        <Button onClick={() => void loadMore()} loading={loading}>
           {t("載入更多")}
         </Button>
       )}
     </Space>
+    </div>
   );
 }
