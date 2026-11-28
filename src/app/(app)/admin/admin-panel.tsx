@@ -10,6 +10,7 @@ import type { SecretGrant } from "@/db/schema";
 import { maxModelPresets, type ModelPreset } from "@/lib/models";
 import styles from "./admin-panel.module.css";
 import { DirectoryRobot } from "../directory-robot";
+import { RequestLogsTab } from "./request-logs-tab";
 import {
   addMembershipAction,
   deleteSecretAction,
@@ -59,6 +60,7 @@ export function AdminPanel(props: Props) {
           ...(props.isAdmin ? [{ key: "models", label: t("模型"), children: <ModelPresets key={JSON.stringify(props.modelPresets)} {...props} /> }] : []),
           ...(props.isAdmin ? [{ key: "sync", label: t("RCSL 同步"), children: <Sync {...props} /> }] : []),
           { key: "audit", label: t("操作紀錄"), children: <Audit {...props} /> },
+          ...(props.isAdmin ? [{ key: "requests", label: t("請求紀錄"), children: <RequestLogsTab /> }] : []),
         ]}
       />
     </App>

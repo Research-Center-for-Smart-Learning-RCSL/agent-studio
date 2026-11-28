@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   index,
@@ -157,3 +158,25 @@ export const modelPresets = pgTable("model_presets", {
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Request and error events, written by Studio itself (source "studio") and pushed by the backend ("backend") for the
+ * admin page. Rows older than the retention are deleted by the writer; see docs/logging.md.
+ */
+export const requestLogs = pgTable(
+  "request_logs",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    ts: timestamp("ts", { withTimezone: true }).notNull(),
+    source: text("source").notNull(),
+    event: text("event").notNull(),
+    route: text("route"),
+    status: integer("status"),
+    ms: integer("ms"),
+    projectId: text("project_id"),
+    agentId: text("agent_id"),
+    /** Every other field of the log line. */
+    detail: jsonb("detail").$type<Record<string, unknown>>(),
+  },
+  (t) => [index("request_logs_ts_idx").on(t.ts), index("request_logs_source_event_ts_idx").on(t.source, t.event, t.ts)],
+);
